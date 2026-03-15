@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/sonner";
+import { formatApiErrorMessage } from "@/lib/api/error-messages";
 import {
   type BootstrapTenantPayload,
   bootstrapTenant,
@@ -117,11 +118,12 @@ export function SignupForm() {
         },
       });
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Não foi possível criar a conta inicial.";
-      toast.error(message);
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Não foi possível criar a conta inicial.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -138,11 +140,12 @@ export function SignupForm() {
       await resendVerificationEmail(createdAccount.user.email);
       toast.success("Enviamos um novo e-mail de verificação.");
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : "Não foi possível reenviar o e-mail de verificação.";
-      toast.error(message);
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Não foi possível reenviar o e-mail de verificação.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
     } finally {
       setIsResendingEmail(false);
     }
