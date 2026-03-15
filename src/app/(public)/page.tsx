@@ -98,8 +98,8 @@ export default function LandingPage() {
             >
               Backend pronto
             </a>
-            <Link href="/app" className={secondaryActionClassName}>
-              Abrir workspace
+            <Link href="/login" className={secondaryActionClassName}>
+              Entrar
             </Link>
           </div>
         </header>
@@ -121,7 +121,7 @@ export default function LandingPage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Link href="/app" className={primaryActionClassName}>
+              <Link href="/login" className={primaryActionClassName}>
                 Entrar no workspace
                 <ArrowRight className="size-4" />
               </Link>
@@ -204,8 +204,8 @@ export default function LandingPage() {
                 <div className="space-y-2">
                   <Badge variant="secondary">Próximo passo</Badge>
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Implementar autenticação real em cima da base de sessão e do
-                    shell.
+                    Evoluir a área autenticada com módulos reais de times,
+                    mensageria, observabilidade e governança.
                   </p>
                 </div>
                 <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-accent text-accent-foreground">

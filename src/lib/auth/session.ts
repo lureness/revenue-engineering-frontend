@@ -25,6 +25,7 @@ export type AuthSession = {
 };
 
 export const AUTH_SESSION_STORAGE_KEY = "lureness.auth.session";
+const EXPIRATION_SKEW_MS = 30_000;
 
 function canUseStorage() {
   return (
@@ -50,23 +51,33 @@ export function readAuthSession() {
   }
 }
 
+function resolveIssuedAt(
+  session: Omit<AuthSession, "issued_at"> | AuthSession,
+) {
+  return "issued_at" in session ? session.issued_at : new Date().toISOString();
+}
+
 export function writeAuthSession(
   session: Omit<AuthSession, "issued_at"> | AuthSession,
 ) {
   if (!canUseStorage()) {
-    return;
+    return {
+      ...session,
+      issued_at: resolveIssuedAt(session),
+    };
   }
 
   const payload: AuthSession = {
     ...session,
-    issued_at:
-      "issued_at" in session ? session.issued_at : new Date().toISOString(),
+    issued_at: resolveIssuedAt(session),
   };
 
   window.localStorage.setItem(
     AUTH_SESSION_STORAGE_KEY,
     JSON.stringify(payload),
   );
+
+  return payload;
 }
 
 export function clearAuthSession() {
@@ -79,4 +90,25 @@ export function clearAuthSession() {
 
 export function getStoredAccessToken() {
   return readAuthSession()?.access_token ?? null;
+}
+
+function getIssuedAtDate(session: AuthSession) {
+  const timestamp = Date.parse(session.issued_at);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+}
+
+export function getAccessTokenExpiresAt(session: AuthSession) {
+  return getIssuedAtDate(session) + session.expires_in * 1000;
+}
+
+export function getRefreshTokenExpiresAt(session: AuthSession) {
+  return getIssuedAtDate(session) + session.refresh_expires_in * 1000;
+}
+
+export function isAccessTokenExpired(session: AuthSession) {
+  return getAccessTokenExpiresAt(session) <= Date.now() + EXPIRATION_SKEW_MS;
+}
+
+export function isRefreshTokenExpired(session: AuthSession) {
+  return getRefreshTokenExpiresAt(session) <= Date.now() + EXPIRATION_SKEW_MS;
 }

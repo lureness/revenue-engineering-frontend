@@ -21,37 +21,37 @@ import { publicEnv } from "@/lib/env";
 
 const nextModules = [
   {
-    title: "Autenticação",
-    description:
-      "Login, onboarding, verify-email e recuperação de senha podem entrar agora sem refazer a fundação.",
-    icon: KeyRound,
-  },
-  {
     title: "Times",
     description:
-      "O backend já suporta times, invites e memberships. Falta só traduzir isso em UI operacional.",
+      "O próximo passo natural é transformar memberships, roles e invites em UI operacional.",
     icon: UsersRound,
   },
   {
     title: "Mensageria",
     description:
-      "Providers, senders, inbound e status callbacks já estão modelados para virar telas de operação.",
+      "Providers, senders, inbound e status callbacks já estão prontos para telas de operação.",
     icon: MessageSquareMore,
   },
   {
     title: "Observabilidade",
     description:
-      "Dashboards e drilldowns já existem. O próximo passo é materializar essas visões no frontend.",
+      "Dashboards e drilldowns já existem. Falta transformar isso em leitura visual do produto.",
     icon: Activity,
+  },
+  {
+    title: "Governança",
+    description:
+      "RBAC, grants customizados e permissões efetivas já estão modelados para o painel.",
+    icon: ShieldCheck,
   },
 ] as const;
 
 const foundationChecklist = [
-  "Rota pública em `/` para landing e posicionamento do produto.",
-  "Shell reutilizável em `/app` para a área autenticada.",
-  "Base de env pública com `NEXT_PUBLIC_API_BASE_URL`.",
-  "Cliente HTTP único com tratamento central de erro.",
-  "Persistência local de sessão pronta para o próximo slice.",
+  "Sessão local com access token, refresh token e expiração controlada.",
+  "Rota `/app` protegida por guard do lado do cliente.",
+  "Login real contra `/auth/login` com persistência local.",
+  "Logout conectado ao backend com revogação de sessão.",
+  "Redirecionamento automático entre rotas públicas e privadas.",
 ] as const;
 
 export default function WorkspacePage() {
@@ -62,11 +62,12 @@ export default function WorkspacePage() {
           <div className="space-y-4">
             <Badge variant="secondary">Workspace overview</Badge>
             <h2 className="font-serif text-4xl tracking-tight text-foreground md:text-5xl">
-              O aplicativo já tem carcaça para receber o backend.
+              O aplicativo já autentica e abre a área privada com sessão real.
             </h2>
             <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
-              Este espaço existe para receber autenticação, dashboard, gestão de
-              times, mensageria e observabilidade sem retrabalho estrutural.
+              A fundação do frontend agora já conhece o backend de auth. O
+              próximo passo é transformar os demais domínios em fluxos
+              operacionais dentro do workspace.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
@@ -76,7 +77,7 @@ export default function WorkspacePage() {
                 Voltar para a landing
               </Link>
               <div className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background">
-                Próximo passo: autenticação
+                Próximo passo: times e mensageria
                 <ArrowRight className="size-4" />
               </div>
             </div>
@@ -94,17 +95,17 @@ export default function WorkspacePage() {
               <div className="space-y-2">
                 <Badge variant="outline">Estado atual</Badge>
                 <p className="text-sm leading-7 text-muted-foreground">
-                  O frontend ainda não autentica nem chama dados reais. Mas a
-                  base de integração já está pronta para isso entrar no próximo
-                  slice.
+                  O login e a proteção da rota privada já estão conectados. O
+                  próximo uso real da API pode entrar por módulos como teams,
+                  invites, observabilidade e mensageria.
                 </p>
               </div>
               <Separator />
               <div className="space-y-2">
                 <Badge variant="secondary">Objetivo</Badge>
                 <p className="text-sm leading-7 text-secondary-foreground">
-                  Conectar login, sessão, guards e o primeiro dashboard usando
-                  os contratos existentes do backend.
+                  Evoluir a área autenticada para dashboards, operações e
+                  governança em cima da sessão já conectada.
                 </p>
               </div>
             </CardContent>
@@ -130,7 +131,7 @@ export default function WorkspacePage() {
                 <CardContent className="pt-3">
                   <div className="flex items-start gap-3 text-sm leading-6 text-muted-foreground">
                     <span className="mt-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-chart-2 text-background">
-                      <ShieldCheck className="size-3.5" />
+                      <KeyRound className="size-3.5" />
                     </span>
                     <span>{item}</span>
                   </div>

@@ -72,6 +72,11 @@ const navigationItems = [
 
 type AppShellProps = {
   children: ReactNode;
+  tenantName?: string;
+  userEmail?: string;
+  userRole?: string;
+  onSignOut?: () => void | Promise<void>;
+  signOutPending?: boolean;
 };
 
 type SidebarContentProps = {
@@ -239,7 +244,14 @@ function SidebarContent({
   );
 }
 
-export function AppShell({ children }: AppShellProps) {
+export function AppShell({
+  children,
+  tenantName,
+  userEmail,
+  userRole,
+  onSignOut,
+  signOutPending = false,
+}: AppShellProps) {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
@@ -343,11 +355,32 @@ export function AppShell({ children }: AppShellProps) {
                 </p>
               </div>
             </div>
-            <div className="self-start">
-              <Badge variant="outline" className="gap-2 px-3 py-2 text-sm">
-                <span className="inline-flex size-2.5 rounded-full bg-chart-2" />
-                Próximo slice recomendado: autenticação e sessão real
-              </Badge>
+            <div className="flex flex-wrap items-center gap-3 self-start">
+              {tenantName ? (
+                <Badge variant="outline" className="gap-2 px-3 py-2 text-sm">
+                  <span className="inline-flex size-2.5 rounded-full bg-chart-2" />
+                  {tenantName}
+                </Badge>
+              ) : null}
+              {userEmail ? (
+                <div className="hidden text-right md:block">
+                  <p className="text-sm font-medium text-foreground">
+                    {userEmail}
+                  </p>
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                    {userRole ?? "member"}
+                  </p>
+                </div>
+              ) : null}
+              {onSignOut ? (
+                <Button
+                  variant="outline"
+                  onClick={onSignOut}
+                  disabled={signOutPending}
+                >
+                  {signOutPending ? "Saindo..." : "Sair"}
+                </Button>
+              ) : null}
             </div>
           </header>
 

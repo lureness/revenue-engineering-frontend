@@ -1,11 +1,11 @@
 import type { ReactNode } from "react";
 
-import { AppShell } from "@/components/layout/app-shell";
+import { ProtectedWorkspaceShell } from "@/components/auth/protected-workspace-shell";
 
 type WorkspaceLayoutProps = {
   children: ReactNode;
 };
 
 export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
-  return <AppShell>{children}</AppShell>;
+  return <ProtectedWorkspaceShell>{children}</ProtectedWorkspaceShell>;
 }
