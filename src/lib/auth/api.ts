@@ -55,6 +55,16 @@ export async function resendVerificationEmail(email: string) {
   });
 }
 
+export async function verifyEmailToken(token: string) {
+  return apiRequest<void>("/auth/verify-email", {
+    method: "POST",
+    body: {
+      token,
+    },
+    cache: "no-store",
+  });
+}
+
 export async function refreshCurrentSession(refreshToken: string) {
   return apiRequest<AuthSessionPayload>("/auth/refresh", {
     method: "POST",
