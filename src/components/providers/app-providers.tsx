@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/sonner";
 
 export function AppProviders({ children }: PropsWithChildren) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
       <AuthProvider>{children}</AuthProvider>
       <Toaster richColors position="top-right" />
     </ThemeProvider>

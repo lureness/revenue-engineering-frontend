@@ -10,6 +10,7 @@ import {
 import Link from "next/link";
 
 import { LurenessMark } from "@/components/brand/lureness-mark";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -86,6 +87,7 @@ export default function LandingPage() {
           <LurenessMark />
 
           <div className="flex flex-wrap items-center gap-3">
+            <ThemeToggle />
             <a
               href="#foundation"
               className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"

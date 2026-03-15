@@ -16,6 +16,7 @@ import Link from "next/link";
 import { type ReactNode, useState } from "react";
 
 import { LurenessMark } from "@/components/brand/lureness-mark";
+import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -356,6 +357,7 @@ export function AppShell({
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-3 self-start">
+              <ThemeToggle />
               {tenantName ? (
                 <Badge variant="outline" className="gap-2 px-3 py-2 text-sm">
                   <span className="inline-flex size-2.5 rounded-full bg-chart-2" />
