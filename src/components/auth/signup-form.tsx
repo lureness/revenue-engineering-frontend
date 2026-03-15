@@ -16,10 +16,10 @@ import {
   Field,
   FieldContent,
   FieldDescription,
-  FieldError,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/sonner";
 import {
   type BootstrapTenantPayload,
   bootstrapTenant,
@@ -50,8 +50,6 @@ export function SignupForm() {
   const [adminPassword, setAdminPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [slugManuallyEdited, setSlugManuallyEdited] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isResendingEmail, setIsResendingEmail] = useState(false);
   const [createdAccount, setCreatedAccount] =
@@ -73,35 +71,33 @@ export function SignupForm() {
     const normalizedEmail = adminEmail.trim().toLowerCase();
 
     if (normalizedTenantName.length < 2) {
-      setErrorMessage("Informe um nome de tenant com pelo menos 2 caracteres.");
+      toast.error("Informe um nome de tenant com pelo menos 2 caracteres.");
       return;
     }
 
     if (!isValidTenantSlug(normalizedTenantSlug)) {
-      setErrorMessage(
+      toast.error(
         "Use um slug com 3 a 100 caracteres, apenas letras minúsculas, números e hífens.",
       );
       return;
     }
 
     if (!isValidEmail(normalizedEmail)) {
-      setErrorMessage("Informe um e-mail válido.");
+      toast.error("Informe um e-mail válido.");
       return;
     }
 
     if (adminPassword.length < 8) {
-      setErrorMessage("A senha precisa ter pelo menos 8 caracteres.");
+      toast.error("A senha precisa ter pelo menos 8 caracteres.");
       return;
     }
 
     if (adminPassword !== confirmPassword) {
-      setErrorMessage("A confirmação de senha não confere.");
+      toast.error("A confirmação de senha não confere.");
       return;
     }
 
     setIsSubmitting(true);
-    setErrorMessage(null);
-    setSuccessMessage(null);
 
     try {
       const payload: BootstrapTenantPayload = {
@@ -125,7 +121,7 @@ export function SignupForm() {
         error instanceof Error
           ? error.message
           : "Não foi possível criar a conta inicial.";
-      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -137,18 +133,16 @@ export function SignupForm() {
     }
 
     setIsResendingEmail(true);
-    setErrorMessage(null);
-    setSuccessMessage(null);
 
     try {
       await resendVerificationEmail(createdAccount.user.email);
-      setSuccessMessage("Enviamos um novo e-mail de verificação.");
+      toast.success("Enviamos um novo e-mail de verificação.");
     } catch (error) {
       const message =
         error instanceof Error
           ? error.message
           : "Não foi possível reenviar o e-mail de verificação.";
-      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setIsResendingEmail(false);
     }
@@ -200,11 +194,6 @@ export function SignupForm() {
               </div>
             </CardContent>
           </Card>
-
-          <FieldError>{errorMessage}</FieldError>
-          {successMessage ? (
-            <p className="text-sm leading-6 text-chart-2">{successMessage}</p>
-          ) : null}
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button
@@ -341,8 +330,6 @@ export function SignupForm() {
               </FieldContent>
             </Field>
           </div>
-
-          <FieldError>{errorMessage}</FieldError>
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button

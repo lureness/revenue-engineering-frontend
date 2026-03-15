@@ -1,9 +1,16 @@
 "use client";
 
+import { ThemeProvider } from "next-themes";
 import type { PropsWithChildren } from "react";
 
 import { AuthProvider } from "@/components/auth/auth-provider";
+import { Toaster } from "@/components/ui/sonner";
 
 export function AppProviders({ children }: PropsWithChildren) {
-  return <AuthProvider>{children}</AuthProvider>;
+  return (
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+      <AuthProvider>{children}</AuthProvider>
+      <Toaster richColors position="top-right" />
+    </ThemeProvider>
+  );
 }

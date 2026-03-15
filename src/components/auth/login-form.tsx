@@ -19,10 +19,10 @@ import {
   Field,
   FieldContent,
   FieldDescription,
-  FieldError,
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { toast } from "@/components/ui/sonner";
 import { resolveSafeRedirectPath } from "@/lib/auth/navigation";
 
 function isValidEmail(value: string) {
@@ -35,7 +35,6 @@ export function LoginForm() {
   const { signIn } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -44,17 +43,16 @@ export function LoginForm() {
     const normalizedEmail = email.trim().toLowerCase();
 
     if (!isValidEmail(normalizedEmail)) {
-      setErrorMessage("Informe um e-mail válido.");
+      toast.error("Informe um e-mail válido.");
       return;
     }
 
     if (password.length < 8) {
-      setErrorMessage("A senha precisa ter pelo menos 8 caracteres.");
+      toast.error("A senha precisa ter pelo menos 8 caracteres.");
       return;
     }
 
     setIsSubmitting(true);
-    setErrorMessage(null);
 
     try {
       await signIn({
@@ -72,7 +70,7 @@ export function LoginForm() {
         error instanceof Error
           ? error.message
           : "Não foi possível iniciar a sessão.";
-      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setIsSubmitting(false);
     }
@@ -133,8 +131,6 @@ export function LoginForm() {
               </FieldDescription>
             </FieldContent>
           </Field>
-
-          <FieldError>{errorMessage}</FieldError>
 
           <div className="flex flex-col gap-3 sm:flex-row">
             <Button
