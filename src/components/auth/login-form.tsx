@@ -80,7 +80,7 @@ export function LoginForm() {
 
   return (
     <Card className="glow-border w-full rounded-[2rem] bg-card shadow-md">
-      <CardHeader className="gap-3">
+      <CardHeader className="gap-3 px-6 pt-6 md:px-7 md:pt-7">
         <Badge variant="secondary" className="w-fit">
           Login
         </Badge>
@@ -98,7 +98,7 @@ export function LoginForm() {
         </div>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="px-6 pb-6 md:px-7 md:pb-7">
         <form className="grid gap-5" onSubmit={handleSubmit}>
           <Field>
             <FieldLabel htmlFor="login-email">E-mail</FieldLabel>
@@ -150,6 +150,17 @@ export function LoginForm() {
               Voltar para a landing
             </Button>
           </div>
+
+          <p className="text-sm leading-6 text-muted-foreground">
+            Ainda não tem conta?{" "}
+            <Link
+              href="/signup"
+              className="font-medium text-foreground transition-colors hover:text-primary"
+            >
+              Criar workspace inicial
+            </Link>
+            .
+          </p>
         </form>
       </CardContent>
     </Card>

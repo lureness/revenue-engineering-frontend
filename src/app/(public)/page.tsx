@@ -98,6 +98,9 @@ export default function LandingPage() {
             >
               Backend pronto
             </a>
+            <Link href="/signup" className={secondaryActionClassName}>
+              Criar conta
+            </Link>
             <Link href="/login" className={secondaryActionClassName}>
               Entrar
             </Link>
@@ -121,13 +124,13 @@ export default function LandingPage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Link href="/login" className={primaryActionClassName}>
-                Entrar no workspace
+              <Link href="/signup" className={primaryActionClassName}>
+                Criar conta inicial
                 <ArrowRight className="size-4" />
               </Link>
-              <a href="#foundation" className={secondaryActionClassName}>
-                Ver a estrutura
-              </a>
+              <Link href="/login" className={secondaryActionClassName}>
+                Já tenho conta
+              </Link>
             </div>
 
             <Card className="bg-card/85 shadow-sm">
