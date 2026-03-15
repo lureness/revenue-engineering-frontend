@@ -217,7 +217,12 @@ export function SignupForm() {
                 ? "Reenviando..."
                 : "Reenviar e-mail de verificação"}
             </Button>
-            <Button variant="outline" size="lg" render={<Link href="/login" />}>
+            <Button
+              variant="outline"
+              size="lg"
+              nativeButton={false}
+              render={<Link href="/login" />}
+            >
               Ir para login
             </Button>
           </div>
@@ -349,7 +354,12 @@ export function SignupForm() {
               {isSubmitting ? "Criando..." : "Criar conta"}
               <ArrowRight className="size-4" />
             </Button>
-            <Button variant="outline" size="lg" render={<Link href="/login" />}>
+            <Button
+              variant="outline"
+              size="lg"
+              nativeButton={false}
+              render={<Link href="/login" />}
+            >
               Já tenho conta
             </Button>
           </div>

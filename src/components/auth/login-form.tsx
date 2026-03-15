@@ -146,7 +146,12 @@ export function LoginForm() {
               {isSubmitting ? "Entrando..." : "Entrar"}
               <ArrowRight className="size-4" />
             </Button>
-            <Button variant="outline" size="lg" render={<Link href="/" />}>
+            <Button
+              variant="outline"
+              size="lg"
+              nativeButton={false}
+              render={<Link href="/" />}
+            >
               Voltar para a landing
             </Button>
           </div>
