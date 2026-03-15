@@ -8,6 +8,15 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { publicEnv } from "@/lib/env";
 
 const nextModules = [
@@ -48,88 +57,109 @@ const foundationChecklist = [
 export default function WorkspacePage() {
   return (
     <div className="grid gap-6">
-      <section className="surface-panel-strong grid gap-6 rounded-4xl p-6 lg:grid-cols-[1.1fr_0.9fr] lg:p-8">
-        <div className="space-y-4">
-          <p className="eyebrow">Workspace overview</p>
-          <h2 className="font-serif text-4xl tracking-tight text-foreground md:text-5xl">
-            O aplicativo já tem carcaça para receber o backend.
-          </h2>
-          <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
-            Este espaço existe para receber autenticação, dashboard, gestão de
-            times, mensageria e observabilidade sem retrabalho estrutural.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-card px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-            >
-              Voltar para a landing
-            </Link>
-            <div className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background">
-              Próximo passo: autenticação
-              <ArrowRight className="size-4" />
+      <Card className="grid gap-6 rounded-4xl bg-card shadow-md lg:grid-cols-[1.1fr_0.9fr] lg:p-2">
+        <CardContent className="grid gap-6 pt-6 lg:grid-cols-[1.1fr_0.9fr] lg:p-6">
+          <div className="space-y-4">
+            <Badge variant="secondary">Workspace overview</Badge>
+            <h2 className="font-serif text-4xl tracking-tight text-foreground md:text-5xl">
+              O aplicativo já tem carcaça para receber o backend.
+            </h2>
+            <p className="max-w-2xl text-sm leading-7 text-muted-foreground">
+              Este espaço existe para receber autenticação, dashboard, gestão de
+              times, mensageria e observabilidade sem retrabalho estrutural.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-card px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                Voltar para a landing
+              </Link>
+              <div className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background">
+                Próximo passo: autenticação
+                <ArrowRight className="size-4" />
+              </div>
             </div>
           </div>
-        </div>
 
-        <div className="surface-panel grid gap-3 p-5">
-          <div className="space-y-1">
-            <p className="eyebrow">API base</p>
-            <p className="truncate font-mono text-sm text-foreground">
-              {publicEnv.apiBaseUrl}
-            </p>
-          </div>
-          <div className="rounded-[1.3rem] border border-border/70 bg-background/90 p-4">
-            <p className="eyebrow">Estado atual</p>
-            <p className="mt-2 text-sm leading-7 text-muted-foreground">
-              O frontend ainda não autentica nem chama dados reais. Mas a base
-              de integração já está pronta para isso entrar no próximo slice.
-            </p>
-          </div>
-          <div className="rounded-[1.3rem] border border-border/70 bg-secondary/50 p-4">
-            <p className="eyebrow">Objetivo</p>
-            <p className="mt-2 text-sm leading-7 text-secondary-foreground">
-              Conectar login, sessão, guards e o primeiro dashboard usando os
-              contratos existentes do backend.
-            </p>
-          </div>
-        </div>
-      </section>
+          <Card className="bg-background/70">
+            <CardContent className="grid gap-3 pt-4">
+              <div className="space-y-2">
+                <Badge variant="secondary">API base</Badge>
+                <p className="truncate font-mono text-sm text-foreground">
+                  {publicEnv.apiBaseUrl}
+                </p>
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <Badge variant="outline">Estado atual</Badge>
+                <p className="text-sm leading-7 text-muted-foreground">
+                  O frontend ainda não autentica nem chama dados reais. Mas a
+                  base de integração já está pronta para isso entrar no próximo
+                  slice.
+                </p>
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <Badge variant="secondary">Objetivo</Badge>
+                <p className="text-sm leading-7 text-secondary-foreground">
+                  Conectar login, sessão, guards e o primeiro dashboard usando
+                  os contratos existentes do backend.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </CardContent>
+      </Card>
 
       <section className="grid gap-4 lg:grid-cols-[0.92fr_1.08fr]">
-        <div className="surface-panel p-6">
-          <p className="eyebrow">Checklist da fundação</p>
-          <div className="mt-4 grid gap-3">
+        <Card className="bg-card/85 shadow-sm">
+          <CardHeader>
+            <Badge variant="secondary">Checklist da fundação</Badge>
+            <CardTitle className="mt-2 text-xl tracking-tight text-foreground">
+              O que já está pronto antes da autenticação
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="grid gap-3">
             {foundationChecklist.map((item) => (
-              <div
+              <Card
                 key={item}
-                className="flex items-start gap-3 rounded-[1.2rem] border border-border/70 bg-background/85 px-4 py-4 text-sm leading-6 text-muted-foreground"
+                size="sm"
+                className="rounded-[1.2rem] bg-background/85"
               >
-                <span className="mt-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-chart-2 text-background">
-                  <ShieldCheck className="size-3.5" />
-                </span>
-                <span>{item}</span>
-              </div>
+                <CardContent className="pt-3">
+                  <div className="flex items-start gap-3 text-sm leading-6 text-muted-foreground">
+                    <span className="mt-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-chart-2 text-background">
+                      <ShieldCheck className="size-3.5" />
+                    </span>
+                    <span>{item}</span>
+                  </div>
+                </CardContent>
+              </Card>
             ))}
-          </div>
-        </div>
+          </CardContent>
+        </Card>
 
         <div className="grid gap-4 md:grid-cols-2">
           {nextModules.map((module) => {
             const Icon = module.icon;
 
             return (
-              <article key={module.title} className="surface-panel p-6">
-                <div className="inline-flex size-11 items-center justify-center rounded-2xl bg-foreground text-background">
-                  <Icon className="size-5" />
-                </div>
-                <h3 className="mt-4 text-xl font-semibold tracking-tight text-foreground">
-                  {module.title}
-                </h3>
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                  {module.description}
-                </p>
-              </article>
+              <Card key={module.title} className="bg-card/85 shadow-sm">
+                <CardHeader>
+                  <div className="inline-flex size-11 items-center justify-center rounded-2xl bg-foreground text-background">
+                    <Icon className="size-5" />
+                  </div>
+                  <CardTitle className="mt-2 text-xl tracking-tight text-foreground">
+                    {module.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="leading-7">
+                    {module.description}
+                  </CardDescription>
+                </CardContent>
+              </Card>
             );
           })}
         </div>

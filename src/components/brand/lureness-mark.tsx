@@ -2,11 +2,13 @@ import { cn } from "@/lib/utils";
 
 type LurenessMarkProps = {
   className?: string;
+  compact?: boolean;
   subtitle?: string;
 };
 
 export function LurenessMark({
   className,
+  compact = false,
   subtitle = "WhatsApp Operations Suite",
 }: LurenessMarkProps) {
   return (
@@ -16,14 +18,16 @@ export function LurenessMark({
         <span className="absolute inset-x-3 inset-y-4 rounded-full bg-accent/45 blur-md" />
         <span className="relative size-4 rounded-full bg-primary ring-4 ring-background" />
       </div>
-      <div className="flex flex-col">
-        <span className="font-serif text-2xl leading-none tracking-tight text-foreground">
-          Lureness
-        </span>
-        <span className="font-mono text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">
-          {subtitle}
-        </span>
-      </div>
+      {compact ? null : (
+        <div className="flex flex-col">
+          <span className="font-serif text-2xl leading-none tracking-tight text-foreground">
+            Lureness
+          </span>
+          <span className="font-mono text-[0.68rem] uppercase tracking-[0.22em] text-muted-foreground">
+            {subtitle}
+          </span>
+        </div>
+      )}
     </div>
   );
 }

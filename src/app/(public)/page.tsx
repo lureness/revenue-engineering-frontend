@@ -10,8 +10,17 @@ import {
 import Link from "next/link";
 
 import { LurenessMark } from "@/components/brand/lureness-mark";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardAction,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { publicEnv } from "@/lib/env";
-import { cn } from "@/lib/utils";
 
 const primaryActionClassName =
   "inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background transition-transform duration-200 hover:-translate-y-0.5";
@@ -121,83 +130,89 @@ export default function LandingPage() {
               </a>
             </div>
 
-            <div className="surface-panel grid gap-4 p-5 md:grid-cols-3">
-              <div className="space-y-1">
-                <p className="eyebrow">Rota pública</p>
-                <p className="text-sm font-medium text-foreground">`/`</p>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Landing, narrativa do produto e entrada principal.
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="eyebrow">Rota privada</p>
-                <p className="text-sm font-medium text-foreground">`/app`</p>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Shell preparado para dashboard, auth e módulos operacionais.
-                </p>
-              </div>
-              <div className="space-y-1">
-                <p className="eyebrow">Base de API</p>
-                <p className="truncate font-mono text-xs text-foreground">
-                  {publicEnv.apiBaseUrl}
-                </p>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Valor lido de `NEXT_PUBLIC_API_BASE_URL`.
-                </p>
-              </div>
-            </div>
+            <Card className="bg-card/85 shadow-sm">
+              <CardContent className="grid gap-4 pt-4 md:grid-cols-3">
+                <div className="space-y-2">
+                  <Badge variant="secondary">Rota pública</Badge>
+                  <p className="text-sm font-medium text-foreground">`/`</p>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Landing, narrativa do produto e entrada principal.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Badge variant="secondary">Rota privada</Badge>
+                  <p className="text-sm font-medium text-foreground">`/app`</p>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Shell preparado para dashboard, auth e módulos operacionais.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Badge variant="secondary">Base de API</Badge>
+                  <p className="truncate font-mono text-xs text-foreground">
+                    {publicEnv.apiBaseUrl}
+                  </p>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Valor lido de `NEXT_PUBLIC_API_BASE_URL`.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="grid gap-4">
-            <div className="surface-panel-strong glow-border rounded-[2rem] p-6">
-              <div className="mb-6 flex items-start justify-between gap-4">
-                <div className="space-y-2">
-                  <p className="eyebrow">Pilares já suportados</p>
-                  <h2 className="font-serif text-3xl tracking-tight text-foreground">
+            <Card className="glow-border rounded-[2rem] bg-card shadow-md">
+              <CardHeader>
+                <div className="space-y-3">
+                  <Badge variant="secondary">Pilares já suportados</Badge>
+                  <CardTitle className="font-serif text-3xl tracking-tight text-foreground">
                     Backend pronto para a interface
-                  </h2>
+                  </CardTitle>
                 </div>
-                <div className="rounded-full border border-border/70 bg-secondary px-3 py-1 font-mono text-[0.68rem] uppercase tracking-[0.18em] text-secondary-foreground">
-                  v0 foundation
-                </div>
-              </div>
-
-              <div className="grid gap-3">
+                <CardAction>
+                  <Badge variant="outline">v0 foundation</Badge>
+                </CardAction>
+              </CardHeader>
+              <CardContent className="grid gap-3">
                 {productPillars.map((pillar) => {
                   const Icon = pillar.icon;
 
                   return (
-                    <div
+                    <Card
                       key={pillar.title}
-                      className="rounded-[1.4rem] border border-border/70 bg-background/85 p-4"
+                      size="sm"
+                      className="rounded-[1.4rem] bg-background/85"
                     >
-                      <div className="mb-3 inline-flex size-10 items-center justify-center rounded-2xl bg-foreground text-background">
-                        <Icon className="size-4" />
-                      </div>
-                      <h3 className="mb-2 text-base font-semibold text-foreground">
-                        {pillar.title}
-                      </h3>
-                      <p className="text-sm leading-6 text-muted-foreground">
-                        {pillar.description}
-                      </p>
-                    </div>
+                      <CardContent className="pt-3">
+                        <div className="mb-3 inline-flex size-10 items-center justify-center rounded-2xl bg-foreground text-background">
+                          <Icon className="size-4" />
+                        </div>
+                        <CardTitle className="mb-2 text-base font-semibold text-foreground">
+                          {pillar.title}
+                        </CardTitle>
+                        <CardDescription className="leading-6">
+                          {pillar.description}
+                        </CardDescription>
+                      </CardContent>
+                    </Card>
                   );
                 })}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
-            <div className="surface-panel flex items-center justify-between gap-4 px-5 py-4">
-              <div className="space-y-1">
-                <p className="eyebrow">Próximo passo</p>
-                <p className="text-sm leading-6 text-muted-foreground">
-                  Implementar autenticação real em cima da base de sessão e do
-                  shell.
-                </p>
-              </div>
-              <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
-                <Waypoints className="size-5" />
-              </div>
-            </div>
+            <Card className="bg-card/85 shadow-sm">
+              <CardContent className="flex items-center justify-between gap-4 pt-4">
+                <div className="space-y-2">
+                  <Badge variant="secondary">Próximo passo</Badge>
+                  <p className="text-sm leading-6 text-muted-foreground">
+                    Implementar autenticação real em cima da base de sessão e do
+                    shell.
+                  </p>
+                </div>
+                <div className="inline-flex size-12 items-center justify-center rounded-2xl bg-accent text-accent-foreground">
+                  <Waypoints className="size-5" />
+                </div>
+              </CardContent>
+            </Card>
           </div>
         </section>
 
@@ -215,56 +230,64 @@ export default function LandingPage() {
 
           <div className="grid gap-4 lg:grid-cols-3">
             {foundationBlocks.map((block) => (
-              <article key={block.title} className="surface-panel p-6">
-                <p className="eyebrow">{block.eyebrow}</p>
-                <h3 className="mt-3 text-xl font-semibold tracking-tight text-foreground">
-                  {block.title}
-                </h3>
-                <p className="mt-3 text-sm leading-7 text-muted-foreground">
-                  {block.description}
-                </p>
-              </article>
+              <Card key={block.title} className="bg-card/85 shadow-sm">
+                <CardHeader>
+                  <Badge variant="secondary">{block.eyebrow}</Badge>
+                  <CardTitle className="mt-2 text-xl font-semibold tracking-tight text-foreground">
+                    {block.title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="leading-7">
+                    {block.description}
+                  </CardDescription>
+                </CardContent>
+              </Card>
             ))}
           </div>
         </section>
 
-        <section
+        <Card
           id="backend"
-          className="surface-panel-strong glow-border mb-6 grid gap-5 rounded-[2rem] p-6 md:grid-cols-[0.95fr_1.05fr] md:p-8"
+          className="glow-border mb-6 rounded-[2rem] bg-card shadow-md"
         >
-          <div className="space-y-3">
-            <p className="eyebrow">Integração</p>
-            <h2 className="section-title text-3xl md:text-4xl">
-              A API já dita o ritmo do produto.
-            </h2>
-            <p className="text-sm leading-7 text-muted-foreground">
-              Auth, teams, invites, mensageria, providers, senders e
-              observability já existem no backend. O frontend agora tem uma
-              fundação limpa para começar a consumir esses contratos sem
-              improviso.
-            </p>
-          </div>
+          <CardContent className="grid gap-5 pt-6 md:grid-cols-[0.95fr_1.05fr] md:p-8">
+            <div className="space-y-3">
+              <Badge variant="secondary">Integração</Badge>
+              <h2 className="section-title text-3xl md:text-4xl">
+                A API já dita o ritmo do produto.
+              </h2>
+              <p className="text-sm leading-7 text-muted-foreground">
+                Auth, teams, invites, mensageria, providers, senders e
+                observability já existem no backend. O frontend agora tem uma
+                fundação limpa para começar a consumir esses contratos sem
+                improviso.
+              </p>
+            </div>
 
-          <div className="grid gap-3">
-            {[
-              "Cliente HTTP centralizado com tratamento de erro e request id.",
-              "Sessão local preparada para access token, refresh token, tenant e usuário.",
-              "Shell pronto para módulos autenticados e navegação futura.",
-            ].map((item) => (
-              <div
-                key={item}
-                className={cn(
-                  "flex items-start gap-3 rounded-[1.3rem] border border-border/70 bg-background/80 px-4 py-4 text-sm leading-6 text-muted-foreground",
-                )}
-              >
-                <span className="mt-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-                  <Layers3 className="size-3.5" />
-                </span>
-                <span>{item}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+            <div className="grid gap-3">
+              {[
+                "Cliente HTTP centralizado com tratamento de erro e request id.",
+                "Sessão local preparada para access token, refresh token, tenant e usuário.",
+                "Shell pronto para módulos autenticados e navegação futura.",
+              ].map((item, index, items) => (
+                <Card key={item} size="sm" className="bg-background/80">
+                  <CardContent className="pt-3">
+                    <div className="flex items-start gap-3 text-sm leading-6 text-muted-foreground">
+                      <span className="mt-1 inline-flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+                        <Layers3 className="size-3.5" />
+                      </span>
+                      <span>{item}</span>
+                    </div>
+                    {index < items.length - 1 ? (
+                      <Separator className="mt-3 opacity-40" />
+                    ) : null}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </main>
   );
