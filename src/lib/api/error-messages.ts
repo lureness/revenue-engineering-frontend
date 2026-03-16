@@ -83,6 +83,24 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   "invalid or expired reset token": {
     title: "O link de redefinição é inválido ou expirou.",
   },
+  "invalid or expired invite": {
+    title: "O link de invite é inválido ou expirou.",
+    description: "Peça um novo invite para entrar no time com um link válido.",
+  },
+  "invite email does not match the authenticated user": {
+    title: "Você entrou com outra conta.",
+    description:
+      "Faça login com o mesmo e-mail que recebeu o invite para aceitar o acesso.",
+  },
+  "invite does not belong to the authenticated tenant": {
+    title: "Esse invite não pertence à sua conta atual.",
+    description: "Troque de conta para continuar com o e-mail convidado.",
+  },
+  "account already exists for invite email": {
+    title: "Essa conta já existe.",
+    description:
+      "Entre com o e-mail convidado para aceitar o invite em vez de criar outra conta.",
+  },
 };
 
 function getErrorDetail(error: unknown) {

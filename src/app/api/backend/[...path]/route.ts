@@ -13,6 +13,7 @@ const LOGIN_ROUTE = "/auth/login";
 const LOGOUT_ROUTE = "/auth/logout";
 const REFRESH_ROUTE = "/auth/refresh";
 const CHANGE_PASSWORD_ROUTE = "/auth/change-password";
+const TEAM_INVITE_REGISTER_ROUTE = "/team-invites/register";
 
 const PUBLIC_AUTH_ROUTES = new Set([
   "/health",
@@ -22,6 +23,14 @@ const PUBLIC_AUTH_ROUTES = new Set([
   "/auth/verify-email",
   "/auth/forgot-password",
   "/auth/reset-password",
+  "/team-invites/resolve",
+  TEAM_INVITE_REGISTER_ROUTE,
+]);
+
+const SESSION_RESPONSE_ROUTES = new Set([
+  LOGIN_ROUTE,
+  REFRESH_ROUTE,
+  TEAM_INVITE_REGISTER_ROUTE,
 ]);
 
 type RouteContext = {
@@ -282,7 +291,7 @@ async function handleProxy(request: NextRequest, context: RouteContext) {
     }
   }
 
-  if (path === LOGIN_ROUTE || path === REFRESH_ROUTE) {
+  if (SESSION_RESPONSE_ROUTES.has(path)) {
     if (!backendResponse.ok) {
       const nextResponse = await buildPassthroughResponse(backendResponse);
 

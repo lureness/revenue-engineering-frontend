@@ -37,9 +37,5 @@ export function resolveAuthRedirectForPath({
     return `/login?${query.toString()}`;
   }
 
-  if (isPublicOnlyAuthRoute(pathname) && hasSession) {
-    return "/app";
-  }
-
   return null;
 }

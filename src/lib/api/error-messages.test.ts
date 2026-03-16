@@ -96,4 +96,21 @@ describe("formatApiErrorMessage", () => {
       title: "Já existe um invite ativo para esse e-mail.",
     });
   });
+
+  it("traduz token inválido de team invite", () => {
+    const error = new ApiClientError({
+      status: 400,
+      message: "invalid or expired invite",
+      requestId: "req_903",
+      detail: {
+        detail: "invalid or expired invite",
+      },
+    });
+
+    expect(formatApiErrorMessage(error)).toEqual({
+      title: "O link de invite é inválido ou expirou.",
+      description:
+        "Peça um novo invite para entrar no time com um link válido.",
+    });
+  });
 });

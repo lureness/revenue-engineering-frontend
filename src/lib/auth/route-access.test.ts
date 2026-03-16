@@ -27,13 +27,13 @@ describe("auth route access", () => {
     ).toBe("/login?redirectTo=%2Fapp%2Fuser%3Ftab%3Dpassword");
   });
 
-  it("redirects authenticated users away from public-only auth routes", () => {
+  it("does not redirect public auth routes only because a cookie exists", () => {
     expect(
       resolveAuthRedirectForPath({
         pathname: "/login",
         hasSession: true,
       }),
-    ).toBe("/app");
+    ).toBeNull();
   });
 
   it("returns null when no redirect is needed", () => {

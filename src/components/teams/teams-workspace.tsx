@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 
+import { useAccess } from "@/components/access/access-provider";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,12 @@ import {
 import { formatApiErrorMessage } from "@/lib/api/error-messages";
 import { formatDateTime } from "@/lib/observability/format";
 import {
+  TEAM_INVITES_MANAGE_PERMISSION,
+  TEAM_MEMBERS_MANAGE_PERMISSION,
+  TEAM_MEMBERS_READ_PERMISSION,
+  TENANT_TEAMS_MANAGE_PERMISSION,
+} from "@/lib/rbac/permissions";
+import {
   createTeam,
   createTeamInvite,
   getTeamInvites,
@@ -95,6 +102,11 @@ function getRoleBadgeVariant(role: TeamRole) {
 
 export function TeamsWorkspace() {
   const { user } = useAuth();
+  const {
+    hasTeamPermission,
+    hasTenantPermission,
+    status: accessStatus,
+  } = useAccess();
 
   const [teams, setTeams] = useState<TeamItem[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -117,6 +129,19 @@ export function TeamsWorkspace() {
   const [pendingInviteId, setPendingInviteId] = useState<string | null>(null);
 
   const selectedTeam = teams.find((team) => team.id === selectedTeamId) ?? null;
+  const canCreateTeam = hasTenantPermission(TENANT_TEAMS_MANAGE_PERMISSION);
+  const canReadSelectedTeamMembers = hasTeamPermission(
+    selectedTeamId,
+    TEAM_MEMBERS_READ_PERMISSION,
+  );
+  const canManageSelectedTeamMembers = hasTeamPermission(
+    selectedTeamId,
+    TEAM_MEMBERS_MANAGE_PERMISSION,
+  );
+  const canManageSelectedTeamInvites = hasTeamPermission(
+    selectedTeamId,
+    TEAM_INVITES_MANAGE_PERMISSION,
+  );
 
   useEffect(() => {
     if (teamSlugManuallyEdited) {
@@ -161,35 +186,46 @@ export function TeamsWorkspace() {
     }
   }, []);
 
-  const loadTeamDetails = useCallback(async (teamId: string) => {
-    setIsLoadingDetails(true);
-    setDetailsError(null);
+  const loadTeamDetails = useCallback(
+    async (teamId: string) => {
+      setIsLoadingDetails(true);
+      setDetailsError(null);
 
-    try {
-      const [nextMembers, nextInvites] = await Promise.all([
-        getTeamMembers(teamId),
-        getTeamInvites(teamId),
-      ]);
+      try {
+        const [nextMembers, nextInvites] = await Promise.all([
+          hasTeamPermission(teamId, TEAM_MEMBERS_READ_PERMISSION)
+            ? getTeamMembers(teamId)
+            : Promise.resolve([]),
+          hasTeamPermission(teamId, TEAM_INVITES_MANAGE_PERMISSION)
+            ? getTeamInvites(teamId)
+            : Promise.resolve([]),
+        ]);
 
-      setMembers(nextMembers);
-      setInvites(nextInvites);
-    } catch (error) {
-      const presentation = formatApiErrorMessage(error, {
-        fallbackTitle: "Não foi possível carregar os dados do time.",
-      });
-      setDetailsError(presentation.title);
-      setMembers([]);
-      setInvites([]);
-    } finally {
-      setIsLoadingDetails(false);
-    }
-  }, []);
+        setMembers(nextMembers);
+        setInvites(nextInvites);
+      } catch (error) {
+        const presentation = formatApiErrorMessage(error, {
+          fallbackTitle: "Não foi possível carregar os dados do time.",
+        });
+        setDetailsError(presentation.title);
+        setMembers([]);
+        setInvites([]);
+      } finally {
+        setIsLoadingDetails(false);
+      }
+    },
+    [hasTeamPermission],
+  );
 
   useEffect(() => {
     void loadTeams();
   }, [loadTeams]);
 
   useEffect(() => {
+    if (accessStatus === "loading") {
+      return;
+    }
+
     if (!selectedTeamId) {
       setMembers([]);
       setInvites([]);
@@ -198,7 +234,7 @@ export function TeamsWorkspace() {
     }
 
     void loadTeamDetails(selectedTeamId);
-  }, [selectedTeamId, loadTeamDetails]);
+  }, [accessStatus, loadTeamDetails, selectedTeamId]);
 
   async function handleCreateTeam(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -392,61 +428,65 @@ export function TeamsWorkspace() {
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,21rem)_minmax(0,1fr)]">
       <div className="grid h-fit gap-6">
-        <Card className="bg-card/85 shadow-sm">
-          <CardHeader>
-            <Badge variant="secondary" className="w-fit">
-              Novo time
-            </Badge>
-            <CardTitle className="mt-2 text-xl tracking-tight text-foreground">
-              Criar time
-            </CardTitle>
-            <CardDescription className="leading-7">
-              Defina o nome e o identificador do próximo time.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form className="grid gap-4" onSubmit={handleCreateTeam}>
-              <Field>
-                <FieldLabel htmlFor="team-name">Nome do time</FieldLabel>
-                <FieldContent>
-                  <Input
-                    id="team-name"
-                    placeholder="Sales Ops"
-                    value={teamName}
-                    onChange={(event) => setTeamName(event.currentTarget.value)}
-                  />
-                </FieldContent>
-              </Field>
+        {canCreateTeam ? (
+          <Card className="bg-card/85 shadow-sm">
+            <CardHeader>
+              <Badge variant="secondary" className="w-fit">
+                Novo time
+              </Badge>
+              <CardTitle className="mt-2 text-xl tracking-tight text-foreground">
+                Criar time
+              </CardTitle>
+              <CardDescription className="leading-7">
+                Defina o nome e o identificador do próximo time.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form className="grid gap-4" onSubmit={handleCreateTeam}>
+                <Field>
+                  <FieldLabel htmlFor="team-name">Nome do time</FieldLabel>
+                  <FieldContent>
+                    <Input
+                      id="team-name"
+                      placeholder="Sales Ops"
+                      value={teamName}
+                      onChange={(event) =>
+                        setTeamName(event.currentTarget.value)
+                      }
+                    />
+                  </FieldContent>
+                </Field>
 
-              <Field>
-                <FieldLabel htmlFor="team-slug">Slug do time</FieldLabel>
-                <FieldContent>
-                  <Input
-                    id="team-slug"
-                    placeholder="sales-ops"
-                    value={teamSlug}
-                    onChange={(event) => {
-                      setTeamSlugManuallyEdited(true);
-                      setTeamSlug(slugifyTeamName(event.currentTarget.value));
-                    }}
-                  />
-                  <FieldDescription>
-                    Use minúsculas, números e hífens.
-                  </FieldDescription>
-                </FieldContent>
-              </Field>
+                <Field>
+                  <FieldLabel htmlFor="team-slug">Slug do time</FieldLabel>
+                  <FieldContent>
+                    <Input
+                      id="team-slug"
+                      placeholder="sales-ops"
+                      value={teamSlug}
+                      onChange={(event) => {
+                        setTeamSlugManuallyEdited(true);
+                        setTeamSlug(slugifyTeamName(event.currentTarget.value));
+                      }}
+                    />
+                    <FieldDescription>
+                      Use minúsculas, números e hífens.
+                    </FieldDescription>
+                  </FieldContent>
+                </Field>
 
-              <Button type="submit" size="lg" disabled={isCreatingTeam}>
-                {isCreatingTeam ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <FolderKanban className="size-4" />
-                )}
-                {isCreatingTeam ? "Criando..." : "Criar time"}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                <Button type="submit" size="lg" disabled={isCreatingTeam}>
+                  {isCreatingTeam ? (
+                    <Loader2 className="size-4 animate-spin" />
+                  ) : (
+                    <FolderKanban className="size-4" />
+                  )}
+                  {isCreatingTeam ? "Criando..." : "Criar time"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card className="bg-card/85 shadow-sm">
           <CardHeader>
@@ -457,7 +497,7 @@ export function TeamsWorkspace() {
               Selecionar time
             </CardTitle>
             <CardDescription className="leading-7">
-              Escolha o time que você quer gerenciar agora.
+              Escolha o time que você quer abrir agora.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-3">
@@ -488,10 +528,9 @@ export function TeamsWorkspace() {
                   <EmptyMedia variant="icon">
                     <FolderKanban className="size-4" />
                   </EmptyMedia>
-                  <EmptyTitle>Nenhum time criado ainda</EmptyTitle>
+                  <EmptyTitle>Nenhum time disponível</EmptyTitle>
                   <EmptyDescription>
-                    Crie o primeiro time para começar a organizar pessoas e
-                    invites.
+                    Assim que você fizer parte de um time, ele aparece aqui.
                   </EmptyDescription>
                 </EmptyHeader>
               </Empty>
@@ -563,8 +602,8 @@ export function TeamsWorkspace() {
               </EmptyMedia>
               <EmptyTitle>Selecione um time</EmptyTitle>
               <EmptyDescription>
-                Quando um time for escolhido, a gestão de membros e invites
-                aparece aqui.
+                Quando um time for escolhido, o painel correspondente aparece
+                aqui conforme as suas permissões.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
@@ -593,9 +632,9 @@ export function TeamsWorkspace() {
                     onClick={() => {
                       void handleRefreshSelectedTeam();
                     }}
-                    disabled={isLoadingDetails}
+                    disabled={isLoadingDetails || accessStatus === "loading"}
                   >
-                    {isLoadingDetails ? (
+                    {isLoadingDetails || accessStatus === "loading" ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
                       <RefreshCcw className="size-4" />
@@ -605,14 +644,18 @@ export function TeamsWorkspace() {
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline">
-                    {members.length}{" "}
-                    {members.length === 1 ? "membro" : "membros"}
-                  </Badge>
-                  <Badge variant="outline">
-                    {invites.length}{" "}
-                    {invites.length === 1 ? "invite ativo" : "invites ativos"}
-                  </Badge>
+                  {canReadSelectedTeamMembers ? (
+                    <Badge variant="outline">
+                      {members.length}{" "}
+                      {members.length === 1 ? "membro" : "membros"}
+                    </Badge>
+                  ) : null}
+                  {canManageSelectedTeamInvites ? (
+                    <Badge variant="outline">
+                      {invites.length}{" "}
+                      {invites.length === 1 ? "invite ativo" : "invites ativos"}
+                    </Badge>
+                  ) : null}
                   <Badge variant="outline">
                     Criado em {formatDateTime(selectedTeam.created_at)}
                   </Badge>
@@ -621,322 +664,377 @@ export function TeamsWorkspace() {
             </Card>
 
             <div className="grid gap-6 2xl:grid-cols-[minmax(0,1fr)_24rem]">
-              <Card className="bg-card/85 shadow-sm">
-                <CardHeader>
-                  <Badge variant="secondary" className="w-fit">
-                    Membros
-                  </Badge>
-                  <CardTitle className="mt-2 text-xl tracking-tight text-foreground">
-                    Pessoas do time
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {detailsError ? (
-                    <Empty className="border border-border/70 bg-background/70">
-                      <EmptyHeader>
-                        <EmptyMedia variant="icon">
-                          <UsersRound className="size-4" />
-                        </EmptyMedia>
-                        <EmptyTitle>{detailsError}</EmptyTitle>
-                        <EmptyDescription>
-                          Atualize o time para tentar novamente.
-                        </EmptyDescription>
-                      </EmptyHeader>
-                    </Empty>
-                  ) : members.length === 0 && !isLoadingDetails ? (
-                    <Empty className="border border-border/70 bg-background/70">
-                      <EmptyHeader>
-                        <EmptyMedia variant="icon">
-                          <UsersRound className="size-4" />
-                        </EmptyMedia>
-                        <EmptyTitle>Nenhum membro encontrado</EmptyTitle>
-                        <EmptyDescription>
-                          Os membros adicionados ao time aparecem aqui.
-                        </EmptyDescription>
-                      </EmptyHeader>
-                    </Empty>
-                  ) : (
-                    <div className="overflow-x-auto">
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Pessoa</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="w-[6rem] text-right">
-                              Ações
-                            </TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {members.map((member) => {
-                            const isPending =
-                              pendingMemberId === member.user_id;
-                            const isCurrentUser = member.user_id === user?.id;
-
-                            return (
-                              <TableRow key={member.user_id}>
-                                <TableCell>
-                                  <div className="grid gap-1">
-                                    <div className="flex flex-wrap items-center gap-2">
-                                      <span className="font-medium text-foreground">
-                                        {member.email}
-                                      </span>
-                                      {isCurrentUser ? (
-                                        <Badge variant="outline">Você</Badge>
-                                      ) : null}
-                                    </div>
-                                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                                      <span>
-                                        {member.email_verified_at
-                                          ? "E-mail verificado"
-                                          : "Aguardando verificação"}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant={getRoleBadgeVariant(member.role)}
-                                  >
-                                    {getRoleLabel(member.role)}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell>
-                                  <Badge
-                                    variant={
-                                      member.is_active ? "secondary" : "outline"
-                                    }
-                                  >
-                                    {member.is_active ? "Ativo" : "Inativo"}
-                                  </Badge>
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger
-                                      render={
-                                        <Button
-                                          variant="outline"
-                                          size="icon-sm"
-                                          aria-label="Abrir ações do membro"
-                                        />
-                                      }
-                                    >
-                                      {isPending ? (
-                                        <Loader2 className="size-4 animate-spin" />
-                                      ) : (
-                                        <MoreHorizontal className="size-4" />
-                                      )}
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent
-                                      align="end"
-                                      className="w-56"
-                                    >
-                                      <DropdownMenuGroup>
-                                        <DropdownMenuLabel>
-                                          Ações do membro
-                                        </DropdownMenuLabel>
-                                        {member.role === "admin" ? (
-                                          <DropdownMenuItem
-                                            disabled={isPending}
-                                            onClick={() => {
-                                              void handleUpdateMemberRole(
-                                                member,
-                                                "member",
-                                              );
-                                            }}
-                                          >
-                                            <UsersRound className="size-4" />
-                                            Tornar membro
-                                          </DropdownMenuItem>
-                                        ) : (
-                                          <DropdownMenuItem
-                                            disabled={isPending}
-                                            onClick={() => {
-                                              void handleUpdateMemberRole(
-                                                member,
-                                                "admin",
-                                              );
-                                            }}
-                                          >
-                                            <ShieldCheck className="size-4" />
-                                            Tornar admin
-                                          </DropdownMenuItem>
-                                        )}
-                                      </DropdownMenuGroup>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        variant="destructive"
-                                        disabled={isPending}
-                                        onClick={() => {
-                                          void handleRemoveMember(member);
-                                        }}
-                                      >
-                                        <Trash2 className="size-4" />
-                                        Remover do time
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })}
-                        </TableBody>
-                      </Table>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <div className="grid h-fit gap-6">
+              {canReadSelectedTeamMembers ? (
                 <Card className="bg-card/85 shadow-sm">
                   <CardHeader>
                     <Badge variant="secondary" className="w-fit">
-                      Invite
+                      Membros
                     </Badge>
                     <CardTitle className="mt-2 text-xl tracking-tight text-foreground">
-                      Convidar pessoa
+                      Pessoas do time
                     </CardTitle>
-                    <CardDescription className="leading-7">
-                      Envie um invite direto para o e-mail da pessoa.
-                    </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <form className="grid gap-4" onSubmit={handleCreateInvite}>
-                      <Field>
-                        <FieldLabel htmlFor="invite-email">E-mail</FieldLabel>
-                        <FieldContent>
-                          <Input
-                            id="invite-email"
-                            type="email"
-                            placeholder="ana@empresa.com"
-                            value={inviteEmail}
-                            onChange={(event) =>
-                              setInviteEmail(event.currentTarget.value)
-                            }
-                          />
-                        </FieldContent>
-                      </Field>
-
-                      <Field>
-                        <FieldLabel>Role inicial</FieldLabel>
-                        <FieldContent>
-                          <div className="grid grid-cols-2 gap-2">
-                            {ROLE_OPTIONS.map((option) => (
-                              <Button
-                                key={option.value}
-                                type="button"
-                                variant={
-                                  inviteRole === option.value
-                                    ? "default"
-                                    : "outline"
-                                }
-                                onClick={() => setInviteRole(option.value)}
-                              >
-                                {option.label}
-                              </Button>
-                            ))}
-                          </div>
-                        </FieldContent>
-                      </Field>
-
-                      <Button
-                        type="submit"
-                        size="lg"
-                        disabled={isCreatingInvite}
-                      >
-                        {isCreatingInvite ? (
-                          <Loader2 className="size-4 animate-spin" />
-                        ) : (
-                          <MailPlus className="size-4" />
-                        )}
-                        {isCreatingInvite ? "Enviando..." : "Enviar invite"}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-card/85 shadow-sm">
-                  <CardHeader>
-                    <Badge variant="secondary" className="w-fit">
-                      Invites ativos
-                    </Badge>
-                    <CardTitle className="mt-2 text-xl tracking-tight text-foreground">
-                      Convites em aberto
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="grid gap-3">
-                    {invites.length === 0 && !isLoadingDetails ? (
+                    {detailsError ? (
                       <Empty className="border border-border/70 bg-background/70">
                         <EmptyHeader>
                           <EmptyMedia variant="icon">
-                            <UserRoundPlus className="size-4" />
+                            <UsersRound className="size-4" />
                           </EmptyMedia>
-                          <EmptyTitle>Nenhum invite ativo</EmptyTitle>
+                          <EmptyTitle>{detailsError}</EmptyTitle>
                           <EmptyDescription>
-                            Os convites pendentes aparecem aqui.
+                            Atualize o time para tentar novamente.
                           </EmptyDescription>
                         </EmptyHeader>
                       </Empty>
-                    ) : null}
+                    ) : members.length === 0 && !isLoadingDetails ? (
+                      <Empty className="border border-border/70 bg-background/70">
+                        <EmptyHeader>
+                          <EmptyMedia variant="icon">
+                            <UsersRound className="size-4" />
+                          </EmptyMedia>
+                          <EmptyTitle>Nenhum membro encontrado</EmptyTitle>
+                          <EmptyDescription>
+                            Os membros adicionados ao time aparecem aqui.
+                          </EmptyDescription>
+                        </EmptyHeader>
+                      </Empty>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Pessoa</TableHead>
+                              <TableHead>Role</TableHead>
+                              <TableHead>Status</TableHead>
+                              <TableHead className="w-[6rem] text-right">
+                                Ações
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {members.map((member) => {
+                              const isPending =
+                                pendingMemberId === member.user_id;
+                              const isCurrentUser = member.user_id === user?.id;
 
-                    {invites.map((invite) => {
-                      const isPending = pendingInviteId === invite.id;
-
-                      return (
-                        <div
-                          key={invite.id}
-                          className="grid gap-4 rounded-[1.2rem] border border-border/70 bg-background/80 px-4 py-4"
-                        >
-                          <div className="flex flex-wrap items-start justify-between gap-3">
-                            <div className="min-w-0">
-                              <p className="truncate text-sm font-medium text-foreground">
-                                {invite.email}
-                              </p>
-                              <p className="mt-1 text-xs text-muted-foreground">
-                                Expira em {formatDateTime(invite.expires_at)}
-                              </p>
-                            </div>
-                            <Badge variant={getRoleBadgeVariant(invite.role)}>
-                              {getRoleLabel(invite.role)}
-                            </Badge>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              disabled={isPending}
-                              onClick={() => {
-                                void handleResendInvite(invite);
-                              }}
-                            >
-                              {isPending ? (
-                                <Loader2 className="size-4 animate-spin" />
-                              ) : (
-                                <RefreshCcw className="size-4" />
-                              )}
-                              Reenviar
-                            </Button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="destructive"
-                              disabled={isPending}
-                              onClick={() => {
-                                void handleRevokeInvite(invite);
-                              }}
-                            >
-                              <Trash2 className="size-4" />
-                              Revogar
-                            </Button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                              return (
+                                <TableRow key={member.user_id}>
+                                  <TableCell>
+                                    <div className="grid gap-1">
+                                      <div className="flex flex-wrap items-center gap-2">
+                                        <span className="font-medium text-foreground">
+                                          {member.email}
+                                        </span>
+                                        {isCurrentUser ? (
+                                          <Badge variant="outline">Você</Badge>
+                                        ) : null}
+                                      </div>
+                                      <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                                        <span>
+                                          {member.email_verified_at
+                                            ? "E-mail verificado"
+                                            : "Aguardando verificação"}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant={getRoleBadgeVariant(member.role)}
+                                    >
+                                      {getRoleLabel(member.role)}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell>
+                                    <Badge
+                                      variant={
+                                        member.is_active
+                                          ? "secondary"
+                                          : "outline"
+                                      }
+                                    >
+                                      {member.is_active ? "Ativo" : "Inativo"}
+                                    </Badge>
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    {canManageSelectedTeamMembers ? (
+                                      <DropdownMenu>
+                                        <DropdownMenuTrigger
+                                          render={
+                                            <Button
+                                              variant="outline"
+                                              size="icon-sm"
+                                              aria-label="Abrir ações do membro"
+                                            />
+                                          }
+                                        >
+                                          {isPending ? (
+                                            <Loader2 className="size-4 animate-spin" />
+                                          ) : (
+                                            <MoreHorizontal className="size-4" />
+                                          )}
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent
+                                          align="end"
+                                          className="w-56"
+                                        >
+                                          <DropdownMenuGroup>
+                                            <DropdownMenuLabel>
+                                              Ações do membro
+                                            </DropdownMenuLabel>
+                                            {member.role === "admin" ? (
+                                              <DropdownMenuItem
+                                                disabled={isPending}
+                                                onClick={() => {
+                                                  void handleUpdateMemberRole(
+                                                    member,
+                                                    "member",
+                                                  );
+                                                }}
+                                              >
+                                                <UsersRound className="size-4" />
+                                                Tornar membro
+                                              </DropdownMenuItem>
+                                            ) : (
+                                              <DropdownMenuItem
+                                                disabled={isPending}
+                                                onClick={() => {
+                                                  void handleUpdateMemberRole(
+                                                    member,
+                                                    "admin",
+                                                  );
+                                                }}
+                                              >
+                                                <ShieldCheck className="size-4" />
+                                                Tornar admin
+                                              </DropdownMenuItem>
+                                            )}
+                                          </DropdownMenuGroup>
+                                          <DropdownMenuSeparator />
+                                          <DropdownMenuItem
+                                            variant="destructive"
+                                            disabled={isPending}
+                                            onClick={() => {
+                                              void handleRemoveMember(member);
+                                            }}
+                                          >
+                                            <Trash2 className="size-4" />
+                                            Remover do time
+                                          </DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                      </DropdownMenu>
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground">
+                                        Somente leitura
+                                      </span>
+                                    )}
+                                  </TableCell>
+                                </TableRow>
+                              );
+                            })}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
+              ) : (
+                <Card className="bg-card/85 shadow-sm">
+                  <CardHeader>
+                    <Badge variant="secondary" className="w-fit">
+                      Acesso ao time
+                    </Badge>
+                    <CardTitle className="mt-2 text-xl tracking-tight text-foreground">
+                      Visualização limitada
+                    </CardTitle>
+                    <CardDescription className="leading-7">
+                      Você participa deste time, mas não tem permissão para ver
+                      membros ou administrar convites.
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              )}
+
+              <div className="grid h-fit gap-6">
+                {canManageSelectedTeamInvites ? (
+                  <>
+                    <Card className="bg-card/85 shadow-sm">
+                      <CardHeader>
+                        <Badge variant="secondary" className="w-fit">
+                          Invite
+                        </Badge>
+                        <CardTitle className="mt-2 text-xl tracking-tight text-foreground">
+                          Convidar pessoa
+                        </CardTitle>
+                        <CardDescription className="leading-7">
+                          Envie um invite direto para o e-mail da pessoa.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <form
+                          className="grid gap-4"
+                          onSubmit={handleCreateInvite}
+                        >
+                          <Field>
+                            <FieldLabel htmlFor="invite-email">
+                              E-mail
+                            </FieldLabel>
+                            <FieldContent>
+                              <Input
+                                id="invite-email"
+                                type="email"
+                                placeholder="ana@empresa.com"
+                                value={inviteEmail}
+                                onChange={(event) =>
+                                  setInviteEmail(event.currentTarget.value)
+                                }
+                              />
+                            </FieldContent>
+                          </Field>
+
+                          <Field>
+                            <FieldLabel>Role inicial</FieldLabel>
+                            <FieldContent>
+                              <div className="grid grid-cols-2 gap-2">
+                                {ROLE_OPTIONS.map((option) => (
+                                  <Button
+                                    key={option.value}
+                                    type="button"
+                                    variant={
+                                      inviteRole === option.value
+                                        ? "default"
+                                        : "outline"
+                                    }
+                                    onClick={() => setInviteRole(option.value)}
+                                  >
+                                    {option.label}
+                                  </Button>
+                                ))}
+                              </div>
+                            </FieldContent>
+                          </Field>
+
+                          <Button
+                            type="submit"
+                            size="lg"
+                            disabled={isCreatingInvite}
+                          >
+                            {isCreatingInvite ? (
+                              <Loader2 className="size-4 animate-spin" />
+                            ) : (
+                              <MailPlus className="size-4" />
+                            )}
+                            {isCreatingInvite ? "Enviando..." : "Enviar invite"}
+                          </Button>
+                        </form>
+                      </CardContent>
+                    </Card>
+
+                    <Card className="bg-card/85 shadow-sm">
+                      <CardHeader>
+                        <Badge variant="secondary" className="w-fit">
+                          Invites ativos
+                        </Badge>
+                        <CardTitle className="mt-2 text-xl tracking-tight text-foreground">
+                          Convites em aberto
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid gap-3">
+                        {invites.length === 0 && !isLoadingDetails ? (
+                          <Empty className="border border-border/70 bg-background/70">
+                            <EmptyHeader>
+                              <EmptyMedia variant="icon">
+                                <UserRoundPlus className="size-4" />
+                              </EmptyMedia>
+                              <EmptyTitle>Nenhum invite ativo</EmptyTitle>
+                              <EmptyDescription>
+                                Os convites pendentes aparecem aqui.
+                              </EmptyDescription>
+                            </EmptyHeader>
+                          </Empty>
+                        ) : null}
+
+                        {invites.map((invite) => {
+                          const isPending = pendingInviteId === invite.id;
+
+                          return (
+                            <div
+                              key={invite.id}
+                              className="grid gap-4 rounded-[1.2rem] border border-border/70 bg-background/80 px-4 py-4"
+                            >
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-medium text-foreground">
+                                    {invite.email}
+                                  </p>
+                                  <p className="mt-1 text-xs text-muted-foreground">
+                                    Expira em{" "}
+                                    {formatDateTime(invite.expires_at)}
+                                  </p>
+                                </div>
+                                <Badge
+                                  variant={getRoleBadgeVariant(invite.role)}
+                                >
+                                  {getRoleLabel(invite.role)}
+                                </Badge>
+                              </div>
+
+                              <div className="flex flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={isPending}
+                                  onClick={() => {
+                                    void handleResendInvite(invite);
+                                  }}
+                                >
+                                  {isPending ? (
+                                    <Loader2 className="size-4 animate-spin" />
+                                  ) : (
+                                    <RefreshCcw className="size-4" />
+                                  )}
+                                  Reenviar
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="destructive"
+                                  disabled={isPending}
+                                  onClick={() => {
+                                    void handleRevokeInvite(invite);
+                                  }}
+                                >
+                                  <Trash2 className="size-4" />
+                                  Revogar
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </CardContent>
+                    </Card>
+                  </>
+                ) : null}
+
+                {!canManageSelectedTeamInvites &&
+                !canReadSelectedTeamMembers ? (
+                  <Card className="bg-card/85 shadow-sm">
+                    <CardHeader>
+                      <Badge variant="secondary" className="w-fit">
+                        Time
+                      </Badge>
+                      <CardTitle className="mt-2 text-xl tracking-tight text-foreground">
+                        Acesso operacional restrito
+                      </CardTitle>
+                      <CardDescription className="leading-7">
+                        Este usuário não pode criar times, ver membros ou
+                        gerenciar invites neste contexto.
+                      </CardDescription>
+                    </CardHeader>
+                  </Card>
+                ) : null}
               </div>
             </div>
           </>
