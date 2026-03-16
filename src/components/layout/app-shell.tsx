@@ -50,30 +50,35 @@ const navigationItems = [
     href: "/app",
     icon: Layers3,
     status: "ativo",
+    match: "exact",
   },
   {
     title: "Times",
     href: "/app/teams",
     icon: UsersRound,
     status: "ativo",
+    match: "prefix",
   },
   {
     title: "Mensageria",
     href: "#",
     icon: MessageCircleMore,
     status: "próximo",
+    match: "exact",
   },
   {
     title: "Observabilidade",
     href: "#",
     icon: Activity,
     status: "próximo",
+    match: "exact",
   },
   {
     title: "RBAC",
     href: "#",
     icon: ShieldCheck,
     status: "próximo",
+    match: "exact",
   },
 ] as const;
 
@@ -133,6 +138,21 @@ function getUserInitials(userEmail?: string) {
   }
 
   return localPart.slice(0, 2).toUpperCase() || "U";
+}
+
+function isNavigationItemActive(
+  pathname: string,
+  item: (typeof navigationItems)[number],
+) {
+  if (!item.href.startsWith("/")) {
+    return false;
+  }
+
+  if (item.match === "exact") {
+    return pathname === item.href;
+  }
+
+  return pathname === item.href || pathname.startsWith(`${item.href}/`);
 }
 
 function SidebarContent({
@@ -199,9 +219,7 @@ function SidebarContent({
         {navigationItems.map((item) => {
           const Icon = item.icon;
           const isNavigable = item.href.startsWith("/");
-          const isActive =
-            isNavigable &&
-            (pathname === item.href || pathname.startsWith(`${item.href}/`));
+          const isActive = isNavigationItemActive(pathname, item);
           const itemClassName = cn(
             "flex rounded-2xl border transition-colors",
             collapsed
@@ -209,7 +227,7 @@ function SidebarContent({
               : "items-center justify-between px-4 py-3",
             isActive
               ? "border-foreground/10 bg-foreground text-background shadow-sm"
-              : "border-border/70 bg-background/75 text-foreground",
+              : "border-transparent bg-transparent text-foreground hover:border-border/70 hover:text-primary",
           );
           const iconNode = <Icon className="size-4 shrink-0" />;
 
