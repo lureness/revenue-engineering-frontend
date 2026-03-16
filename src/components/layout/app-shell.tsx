@@ -26,6 +26,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -432,16 +433,18 @@ export function AppShell({
                   </Avatar>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-72 min-w-72">
-                  <DropdownMenuLabel>
-                    <div className="grid gap-0.5 px-1 py-1">
-                      <p className="text-sm font-medium text-foreground">
-                        {userEmail ?? "Conta autenticada"}
-                      </p>
-                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                        {userRole ?? "member"}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel>
+                      <div className="grid gap-0.5 px-1 py-1">
+                        <p className="text-sm font-medium text-foreground">
+                          {userEmail ?? "Conta autenticada"}
+                        </p>
+                        <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                          {userRole ?? "member"}
+                        </p>
+                      </div>
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => router.push("/app/user")}>
                     <Settings className="size-4" />
