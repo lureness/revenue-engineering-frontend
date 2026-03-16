@@ -3,23 +3,34 @@
 import {
   Activity,
   ChevronRight,
-  KeyRound,
   Layers3,
+  LogOut,
   Menu,
   MessageCircleMore,
   PanelLeftClose,
   PanelLeftOpen,
+  Settings,
   ShieldCheck,
   UsersRound,
 } from "lucide-react";
 import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 
 import { LurenessMark } from "@/components/brand/lureness-mark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetBody,
@@ -38,12 +49,6 @@ const navigationItems = [
     href: "/app",
     icon: Layers3,
     status: "ativo",
-  },
-  {
-    title: "Autenticação",
-    href: "#",
-    icon: KeyRound,
-    status: "próximo",
   },
   {
     title: "Times",
@@ -71,6 +76,20 @@ const navigationItems = [
   },
 ] as const;
 
+const pageContentMap = {
+  "/app": {
+    eyebrow: "Workspace",
+    title: "Fundação do aplicativo",
+    description:
+      "A área autenticada já tem carcaça, navegação e integração base para os próximos módulos.",
+  },
+  "/app/user": {
+    eyebrow: "Usuário",
+    title: "Conta e preferências",
+    description: "Gerencie a senha e os ajustes da sua conta autenticada.",
+  },
+} as const;
+
 type AppShellProps = {
   children: ReactNode;
   tenantName?: string;
@@ -86,11 +105,31 @@ type SidebarContentProps = {
   onCollapse?: () => void;
 };
 
+function getUserInitials(userEmail?: string) {
+  if (!userEmail) {
+    return "U";
+  }
+
+  const [localPart] = userEmail.split("@");
+  const chunks = localPart
+    .split(/[.\-_]/)
+    .map((chunk) => chunk.trim())
+    .filter(Boolean);
+
+  if (chunks.length >= 2) {
+    return `${chunks[0]?.[0] ?? ""}${chunks[1]?.[0] ?? ""}`.toUpperCase();
+  }
+
+  return localPart.slice(0, 2).toUpperCase() || "U";
+}
+
 function SidebarContent({
   collapsed = false,
   mobile = false,
   onCollapse,
 }: SidebarContentProps) {
+  const pathname = usePathname();
+
   return (
     <div className="flex h-full flex-col gap-6">
       <div
@@ -142,7 +181,10 @@ function SidebarContent({
       >
         {navigationItems.map((item) => {
           const Icon = item.icon;
-          const isActive = item.href === "/app";
+          const isNavigable = item.href.startsWith("/");
+          const isActive =
+            isNavigable &&
+            (pathname === item.href || pathname.startsWith(`${item.href}/`));
           const itemClassName = cn(
             "flex rounded-2xl border transition-colors",
             collapsed
@@ -155,7 +197,7 @@ function SidebarContent({
           const iconNode = <Icon className="size-4 shrink-0" />;
 
           if (collapsed) {
-            if (!isActive) {
+            if (!isNavigable) {
               return (
                 <div
                   key={item.title}
@@ -194,7 +236,7 @@ function SidebarContent({
             </>
           );
 
-          if (!isActive) {
+          if (!isNavigable) {
             return (
               <div key={item.title} className={itemClassName}>
                 {content}
@@ -253,8 +295,14 @@ export function AppShell({
   onSignOut,
   signOutPending = false,
 }: AppShellProps) {
+  const pathname = usePathname();
+  const router = useRouter();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const pageContent =
+    pageContentMap[pathname as keyof typeof pageContentMap] ??
+    pageContentMap["/app"];
+  const userInitials = getUserInitials(userEmail);
 
   return (
     <div className="page-frame min-h-screen">
@@ -346,13 +394,12 @@ export function AppShell({
                 </div>
               ) : null}
               <div className="space-y-1">
-                <p className="eyebrow">Workspace</p>
+                <p className="eyebrow">{pageContent.eyebrow}</p>
                 <h1 className="font-serif text-3xl tracking-tight text-foreground">
-                  Fundação do aplicativo
+                  {pageContent.title}
                 </h1>
                 <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
-                  A área autenticada já tem carcaça, navegação e integração base
-                  para os próximos módulos.
+                  {pageContent.description}
                 </p>
               </div>
             </div>
@@ -364,25 +411,59 @@ export function AppShell({
                   {tenantName}
                 </Badge>
               ) : null}
-              {userEmail ? (
-                <div className="hidden text-right md:block">
-                  <p className="text-sm font-medium text-foreground">
-                    {userEmail}
-                  </p>
-                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                    {userRole ?? "member"}
-                  </p>
-                </div>
-              ) : null}
-              {onSignOut ? (
-                <Button
-                  variant="outline"
-                  onClick={onSignOut}
-                  disabled={signOutPending}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button
+                      variant="outline"
+                      className="size-11 rounded-full p-0"
+                      aria-label="Abrir menu do usuário"
+                      title="Abrir menu do usuário"
+                    />
+                  }
                 >
-                  {signOutPending ? "Saindo..." : "Sair"}
-                </Button>
-              ) : null}
+                  <Avatar
+                    size="lg"
+                    className="pointer-events-none after:hidden"
+                  >
+                    <AvatarFallback className="bg-foreground text-sm font-medium text-background">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-72 min-w-72">
+                  <DropdownMenuLabel>
+                    <div className="grid gap-0.5 px-1 py-1">
+                      <p className="text-sm font-medium text-foreground">
+                        {userEmail ?? "Conta autenticada"}
+                      </p>
+                      <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                        {userRole ?? "member"}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => router.push("/app/user")}>
+                    <Settings className="size-4" />
+                    Minha conta
+                  </DropdownMenuItem>
+                  {onSignOut ? (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        variant="destructive"
+                        disabled={signOutPending}
+                        onClick={() => {
+                          void onSignOut();
+                        }}
+                      >
+                        <LogOut className="size-4" />
+                        {signOutPending ? "Saindo..." : "Sair"}
+                      </DropdownMenuItem>
+                    </>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </header>
 

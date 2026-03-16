@@ -27,6 +27,7 @@ import {
   resendVerificationEmail,
 } from "@/lib/auth/api";
 import { isValidTenantSlug, slugifyTenantName } from "@/lib/auth/onboarding";
+import { isValidEmail, isValidPasswordLength } from "@/lib/auth/validation";
 
 type BootstrapSuccessState = {
   tenant: {
@@ -39,10 +40,6 @@ type BootstrapSuccessState = {
     email: string;
   };
 };
-
-function isValidEmail(value: string) {
-  return /\S+@\S+\.\S+/.test(value);
-}
 
 export function SignupForm() {
   const [tenantName, setTenantName] = useState("");
@@ -88,7 +85,7 @@ export function SignupForm() {
       return;
     }
 
-    if (adminPassword.length < 8) {
+    if (!isValidPasswordLength(adminPassword)) {
       toast.error("A senha precisa ter pelo menos 8 caracteres.");
       return;
     }

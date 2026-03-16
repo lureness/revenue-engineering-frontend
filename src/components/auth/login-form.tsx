@@ -3,7 +3,7 @@
 import { ArrowRight, KeyRound } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { startTransition, useState } from "react";
+import { startTransition, useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { Badge } from "@/components/ui/badge";
@@ -29,20 +29,41 @@ import {
 } from "@/lib/api/error-messages";
 import { resendVerificationEmail } from "@/lib/auth/api";
 import { resolveSafeRedirectPath } from "@/lib/auth/navigation";
-
-function isValidEmail(value: string) {
-  return /\S+@\S+\.\S+/.test(value);
-}
+import { isValidEmail, isValidPasswordLength } from "@/lib/auth/validation";
 
 export function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { signIn } = useAuth();
+  const announcedReasonRef = useRef<string | null>(null);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [canResendVerification, setCanResendVerification] = useState(false);
   const [isResendingVerification, setIsResendingVerification] = useState(false);
+
+  useEffect(() => {
+    const reason = searchParams.get("reason");
+
+    if (!reason || announcedReasonRef.current === reason) {
+      return;
+    }
+
+    announcedReasonRef.current = reason;
+
+    if (reason === "password-changed") {
+      toast.success("Senha atualizada.", {
+        description: "Entre novamente com a nova senha para continuar.",
+      });
+      return;
+    }
+
+    if (reason === "session-expired") {
+      toast.error("Sua sessão expirou.", {
+        description: "Faça login novamente para continuar.",
+      });
+    }
+  }, [searchParams]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -55,7 +76,7 @@ export function LoginForm() {
       return;
     }
 
-    if (password.length < 8) {
+    if (!isValidPasswordLength(password)) {
       toast.error("A senha precisa ter pelo menos 8 caracteres.");
       setCanResendVerification(false);
       return;
@@ -224,7 +245,13 @@ export function LoginForm() {
             >
               Criar workspace inicial
             </Link>
-            .
+            .{" "}
+            <Link
+              href="/forgot-password"
+              className="font-medium text-foreground transition-colors hover:text-primary"
+            >
+              Esqueceu a senha?
+            </Link>
           </p>
         </form>
       </CardContent>

@@ -17,6 +17,11 @@ export type BootstrapTenantPayload = {
   admin_password: string;
 };
 
+export type ChangePasswordPayload = {
+  current_password: string;
+  new_password: string;
+};
+
 type AuthSessionPayload = Omit<AuthSession, "issued_at">;
 
 type CurrentUserResponse = {
@@ -65,6 +70,27 @@ export async function verifyEmailToken(token: string) {
   });
 }
 
+export async function forgotPassword(email: string) {
+  return apiRequest<void>("/auth/forgot-password", {
+    method: "POST",
+    body: {
+      email,
+    },
+    cache: "no-store",
+  });
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+  return apiRequest<void>("/auth/reset-password", {
+    method: "POST",
+    body: {
+      token,
+      new_password: newPassword,
+    },
+    cache: "no-store",
+  });
+}
+
 export async function refreshCurrentSession(refreshToken: string) {
   return apiRequest<AuthSessionPayload>("/auth/refresh", {
     method: "POST",
@@ -81,6 +107,18 @@ export async function logoutCurrentSession(refreshToken: string) {
     body: {
       refresh_token: refreshToken,
     },
+    cache: "no-store",
+  });
+}
+
+export async function changePassword(
+  accessToken: string,
+  payload: ChangePasswordPayload,
+) {
+  return apiRequest<void>("/auth/change-password", {
+    method: "POST",
+    accessToken,
+    body: payload,
     cache: "no-store",
   });
 }

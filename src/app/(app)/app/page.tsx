@@ -51,7 +51,7 @@ const foundationChecklist = [
   "Rota `/app` protegida por guard do lado do cliente.",
   "Login real contra `/auth/login` com persistência local.",
   "Logout conectado ao backend com revogação de sessão.",
-  "Redirecionamento automático entre rotas públicas e privadas.",
+  "Verificação, recuperação e troca de senha conectadas à API.",
 ] as const;
 
 export default function WorkspacePage() {
@@ -71,15 +71,18 @@ export default function WorkspacePage() {
             </p>
             <div className="flex flex-wrap gap-3">
               <Link
+                href="/app/user"
+                className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background"
+              >
+                Abrir área do usuário
+                <ArrowRight className="size-4" />
+              </Link>
+              <Link
                 href="/"
                 className="inline-flex items-center gap-2 rounded-full border border-foreground/15 bg-card px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted"
               >
                 Voltar para a landing
               </Link>
-              <div className="inline-flex items-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background">
-                Próximo passo: times e mensageria
-                <ArrowRight className="size-4" />
-              </div>
             </div>
           </div>
 
@@ -96,8 +99,9 @@ export default function WorkspacePage() {
                 <Badge variant="outline">Estado atual</Badge>
                 <p className="text-sm leading-7 text-muted-foreground">
                   O login e a proteção da rota privada já estão conectados. O
-                  próximo uso real da API pode entrar por módulos como teams,
-                  invites, observabilidade e mensageria.
+                  núcleo de autenticação agora está completo e o próximo uso
+                  real da API pode entrar por módulos como teams, invites,
+                  observabilidade e mensageria.
                 </p>
               </div>
               <Separator />
@@ -118,7 +122,7 @@ export default function WorkspacePage() {
           <CardHeader>
             <Badge variant="secondary">Checklist da fundação</Badge>
             <CardTitle className="mt-2 text-xl tracking-tight text-foreground">
-              O que já está pronto antes da autenticação
+              O que já está pronto no núcleo de acesso
             </CardTitle>
           </CardHeader>
           <CardContent className="grid gap-3">

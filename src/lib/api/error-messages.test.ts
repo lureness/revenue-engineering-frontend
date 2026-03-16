@@ -51,4 +51,34 @@ describe("formatApiErrorMessage", () => {
       description: "Tente novamente em instantes.",
     });
   });
+
+  it("traduz erros conhecidos de troca de senha", () => {
+    const error = new ApiClientError({
+      status: 401,
+      message: "invalid current password",
+      requestId: "req_900",
+      detail: {
+        detail: "invalid current password",
+      },
+    });
+
+    expect(formatApiErrorMessage(error)).toEqual({
+      title: "A senha atual informada está incorreta.",
+    });
+  });
+
+  it("traduz links inválidos de redefinição", () => {
+    const error = new ApiClientError({
+      status: 400,
+      message: "invalid or expired reset token",
+      requestId: "req_901",
+      detail: {
+        detail: "invalid or expired reset token",
+      },
+    });
+
+    expect(formatApiErrorMessage(error)).toEqual({
+      title: "O link de redefinição é inválido ou expirou.",
+    });
+  });
 });
