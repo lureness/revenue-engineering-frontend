@@ -263,11 +263,15 @@ function SidebarContent({
                 {iconNode}
                 <span className="text-sm font-medium">{item.title}</span>
               </span>
-              <span className="pointer-events-none">
-                <Badge variant={isActive ? "secondary" : "outline"}>
-                  {item.status}
-                </Badge>
-              </span>
+              {isActive ? (
+                <span className="pointer-events-none">
+                  <Badge variant="secondary">{item.status}</Badge>
+                </span>
+              ) : item.status === "próximo" ? (
+                <span className="pointer-events-none">
+                  <Badge variant="outline">{item.status}</Badge>
+                </span>
+              ) : null}
             </>
           );
 
