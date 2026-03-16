@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/sheet";
 import { publicEnv } from "@/lib/env";
 import {
+  TENANT_AUDIT_LOGS_READ_PERMISSION,
   TENANT_MEMBERS_READ_PERMISSION,
   TENANT_MESSAGES_READ_PERMISSION,
   TENANT_METRICS_READ_PERMISSION,
@@ -222,7 +223,10 @@ function SidebarContent({
     }
 
     if (item.title === "Observabilidade") {
-      return !hasTenantPermission(TENANT_METRICS_READ_PERMISSION);
+      return !(
+        hasTenantPermission(TENANT_METRICS_READ_PERMISSION) ||
+        hasTenantPermission(TENANT_AUDIT_LOGS_READ_PERMISSION)
+      );
     }
 
     return false;

@@ -1,4 +1,5 @@
 import type {
+  ApiRequestMetricItem,
   ObservabilityDashboardStatusItem,
   ObservabilityDashboardTimeseriesItem,
 } from "@/lib/observability/types";
@@ -31,6 +32,14 @@ export function formatCompactTime(value: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+}
+
+export function getApiMetricAverageDuration(item: ApiRequestMetricItem) {
+  if (item.total_requests <= 0) {
+    return 0;
+  }
+
+  return item.total_duration_ms / item.total_requests;
 }
 
 export function getTimeseriesPeak(

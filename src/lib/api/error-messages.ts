@@ -108,6 +108,12 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   "missing permission: tenant.messages.read": {
     title: "Você não pode visualizar o histórico de mensagens deste workspace.",
   },
+  "missing permission: tenant.audit_logs.read": {
+    title: "Você não pode visualizar os logs deste workspace.",
+  },
+  "missing permission: tenant.metrics.read": {
+    title: "Você não pode visualizar métricas deste workspace.",
+  },
   "provider account already exists for this tenant or account SID": {
     title: "Já existe uma conta de provedor Twilio para este workspace.",
   },

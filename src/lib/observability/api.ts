@@ -1,5 +1,9 @@
 import { apiRequest } from "@/lib/api/client";
 import type {
+  ApiRequestLogItem,
+  ApiRequestLogsQuery,
+  ApiRequestMetricItem,
+  ApiRequestMetricsQuery,
   ObservabilityDashboardViewDefinitionItem,
   ObservabilityDashboardViewItem,
   ObservabilityDrilldownDefinitionItem,
@@ -114,4 +118,20 @@ export async function getTeamDrilldown(
       cache: "no-store",
     },
   );
+}
+
+export async function getApiRequestLogs(query: ApiRequestLogsQuery = {}) {
+  return apiRequest<ApiRequestLogItem[]>("/observability/logs", {
+    method: "GET",
+    query,
+    cache: "no-store",
+  });
+}
+
+export async function getApiRequestMetrics(query: ApiRequestMetricsQuery = {}) {
+  return apiRequest<ApiRequestMetricItem[]>("/observability/metrics", {
+    method: "GET",
+    query,
+    cache: "no-store",
+  });
 }

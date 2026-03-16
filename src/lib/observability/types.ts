@@ -50,6 +50,40 @@ export type ApiRequestLogItem = {
   created_at: string;
 };
 
+export type ApiRequestMetricItem = {
+  id: string;
+  tenant_id: string | null;
+  bucket_start: string;
+  method: string;
+  route_path: string;
+  status_code: number;
+  total_requests: number;
+  error_requests: number;
+  total_duration_ms: number;
+  min_duration_ms: number;
+  max_duration_ms: number;
+  last_seen_at: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ApiRequestLogsQuery = {
+  method?: string;
+  status_code?: number;
+  route_path?: string;
+  request_id?: string;
+  limit?: number;
+};
+
+export type ApiRequestMetricsQuery = {
+  method?: string;
+  status_code?: number;
+  route_path?: string;
+  start_at?: string;
+  end_at?: string;
+  limit?: number;
+};
+
 export type ObservabilityDashboardItem = {
   window_start: string;
   window_end: string;

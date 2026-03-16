@@ -1,6 +1,7 @@
 import {
   formatDuration,
   formatPercentage,
+  getApiMetricAverageDuration,
   getStatusTone,
   getTimeseriesBarHeight,
   getTimeseriesErrorHeight,
@@ -62,5 +63,26 @@ describe("observability format helpers", () => {
         error_requests: 1,
       }),
     ).toBe("destructive");
+  });
+
+  it("calcula a duração média de uma métrica agregada", () => {
+    expect(
+      getApiMetricAverageDuration({
+        id: "metric-1",
+        tenant_id: "tenant-1",
+        bucket_start: "2026-03-16T10:00:00Z",
+        method: "GET",
+        route_path: "/api/v1/health",
+        status_code: 200,
+        total_requests: 4,
+        error_requests: 0,
+        total_duration_ms: 800,
+        min_duration_ms: 150,
+        max_duration_ms: 250,
+        last_seen_at: "2026-03-16T10:10:00Z",
+        created_at: "2026-03-16T10:00:00Z",
+        updated_at: "2026-03-16T10:10:00Z",
+      }),
+    ).toBe(200);
   });
 });

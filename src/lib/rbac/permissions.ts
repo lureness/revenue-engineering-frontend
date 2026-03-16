@@ -5,6 +5,7 @@ export const TENANT_MEMBERS_READ_PERMISSION = "tenant.members.read";
 export const TENANT_MEMBERS_MANAGE_PERMISSION = "tenant.members.manage";
 export const TENANT_PERMISSIONS_MANAGE_PERMISSION = "tenant.permissions.manage";
 export const TENANT_MESSAGES_READ_PERMISSION = "tenant.messages.read";
+export const TENANT_AUDIT_LOGS_READ_PERMISSION = "tenant.audit_logs.read";
 export const TENANT_METRICS_READ_PERMISSION = "tenant.metrics.read";
 export const TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION =
   "tenant.provider_accounts.read";
