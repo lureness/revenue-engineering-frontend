@@ -1,10 +1,9 @@
 "use client";
 
 import { ShieldCheck } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { startTransition, useState } from "react";
+import { useState } from "react";
 
-import { isUnauthorizedError, useAuth } from "@/components/auth/auth-provider";
+import { isUnauthorizedError } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -26,18 +25,13 @@ import { changePassword } from "@/lib/auth/api";
 import { isValidPasswordLength } from "@/lib/auth/validation";
 
 export function ChangePasswordForm() {
-  const router = useRouter();
-  const { getValidAccessToken, invalidateSession } = useAuth();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function redirectToLogin(reason: string) {
-    invalidateSession();
-    startTransition(() => {
-      router.replace(`/login?reason=${reason}`);
-    });
+  function redirectToLogin(reason: string) {
+    window.location.replace(`/login?reason=${reason}`);
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -66,14 +60,7 @@ export function ChangePasswordForm() {
     setIsSubmitting(true);
 
     try {
-      const accessToken = await getValidAccessToken();
-
-      if (!accessToken) {
-        await redirectToLogin("session-expired");
-        return;
-      }
-
-      await changePassword(accessToken, {
+      await changePassword({
         current_password: currentPassword,
         new_password: newPassword,
       });
@@ -81,13 +68,13 @@ export function ChangePasswordForm() {
         description:
           "Por segurança, você vai precisar entrar novamente com a nova senha.",
       });
-      await redirectToLogin("password-changed");
+      redirectToLogin("password-changed");
     } catch (error) {
       if (isUnauthorizedError(error)) {
         toast.error("Sua sessão expirou.", {
           description: "Faça login novamente para continuar.",
         });
-        await redirectToLogin("session-expired");
+        redirectToLogin("session-expired");
         return;
       }
 

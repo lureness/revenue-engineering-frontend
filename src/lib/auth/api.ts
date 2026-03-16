@@ -1,9 +1,5 @@
 import { apiRequest } from "@/lib/api/client";
-import type {
-  AuthSession,
-  SessionTenant,
-  SessionUser,
-} from "@/lib/auth/session";
+import type { AuthSession } from "@/lib/auth/session";
 
 export type LoginCredentials = {
   email: string;
@@ -22,20 +18,10 @@ export type ChangePasswordPayload = {
   new_password: string;
 };
 
-type AuthSessionPayload = Omit<AuthSession, "issued_at">;
-
-type CurrentUserResponse = {
-  tenant: SessionTenant;
-  user: SessionUser;
-};
-
-type BootstrapTenantResponse = {
-  tenant: SessionTenant;
-  user: SessionUser;
-};
+type BootstrapTenantResponse = AuthSession;
 
 export async function loginWithPassword(credentials: LoginCredentials) {
-  return apiRequest<AuthSessionPayload>("/auth/login", {
+  return apiRequest<AuthSession>("/auth/login", {
     method: "POST",
     body: credentials,
     cache: "no-store",
@@ -91,42 +77,24 @@ export async function resetPassword(token: string, newPassword: string) {
   });
 }
 
-export async function refreshCurrentSession(refreshToken: string) {
-  return apiRequest<AuthSessionPayload>("/auth/refresh", {
-    method: "POST",
-    body: {
-      refresh_token: refreshToken,
-    },
-    cache: "no-store",
-  });
-}
-
-export async function logoutCurrentSession(refreshToken: string) {
+export async function logoutCurrentSession() {
   return apiRequest<void>("/auth/logout", {
     method: "POST",
-    body: {
-      refresh_token: refreshToken,
-    },
     cache: "no-store",
   });
 }
 
-export async function changePassword(
-  accessToken: string,
-  payload: ChangePasswordPayload,
-) {
+export async function changePassword(payload: ChangePasswordPayload) {
   return apiRequest<void>("/auth/change-password", {
     method: "POST",
-    accessToken,
     body: payload,
     cache: "no-store",
   });
 }
 
-export async function getCurrentUser(accessToken: string) {
-  return apiRequest<CurrentUserResponse>("/auth/me", {
+export async function getCurrentUser() {
+  return apiRequest<AuthSession>("/auth/me", {
     method: "GET",
-    accessToken,
     cache: "no-store",
   });
 }

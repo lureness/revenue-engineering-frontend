@@ -6,9 +6,9 @@ import { LoginForm } from "@/components/auth/login-form";
 import { PublicOnly } from "@/components/auth/public-only";
 
 const authFeatures = [
-  "Sessão local com access token e refresh token.",
+  "Sessão protegida por cookies httpOnly.",
   "Redirecionamento automático para o workspace após login.",
-  "Proteção da rota `/app` no cliente.",
+  "Proteção da rota `/app` no cliente e no servidor.",
   "Logout com revogação de sessão no backend.",
   "Recuperação, redefinição e troca de senha já conectadas à API.",
 ] as const;
@@ -25,7 +25,7 @@ function LoginPageContent() {
             <span className="gradient-text">entrar, proteger e sair</span>.
           </>
         }
-        description="Este primeiro slice conecta o login real com a API, persiste a sessão localmente e abre o workspace apenas quando existir uma sessão válida."
+        description="Este slice conecta o login real com a API, mantém a sessão em cookies seguros e abre o workspace apenas quando existir uma sessão válida."
         featureBadge="O que já entrou"
         features={authFeatures}
       >

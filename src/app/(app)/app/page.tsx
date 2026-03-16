@@ -47,9 +47,9 @@ const nextModules = [
 ] as const;
 
 const foundationChecklist = [
-  "Sessão local com access token, refresh token e expiração controlada.",
-  "Rota `/app` protegida por guard do lado do cliente.",
-  "Login real contra `/auth/login` com persistência local.",
+  "Sessão protegida por cookies httpOnly, access token e refresh token no servidor.",
+  "Rota `/app` protegida por proxy do Next e guard do lado do cliente.",
+  "Login real contra `/auth/login` com persistência segura em cookie.",
   "Logout conectado ao backend com revogação de sessão.",
   "Verificação, recuperação e troca de senha conectadas à API.",
 ] as const;

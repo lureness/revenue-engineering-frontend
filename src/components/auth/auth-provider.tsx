@@ -4,6 +4,7 @@ import {
   createContext,
   type PropsWithChildren,
   use,
+  useCallback,
   useEffect,
   useState,
 } from "react";
@@ -14,17 +15,12 @@ import {
   type LoginCredentials,
   loginWithPassword,
   logoutCurrentSession,
-  refreshCurrentSession,
 } from "@/lib/auth/api";
-import {
-  type AuthSession,
-  clearAuthSession,
-  isAccessTokenExpired,
-  isRefreshTokenExpired,
-  readAuthSession,
-  type SessionTenant,
-  type SessionUser,
-  writeAuthSession,
+import { AUTH_UNAUTHORIZED_EVENT } from "@/lib/auth/events";
+import type {
+  AuthSession,
+  SessionTenant,
+  SessionUser,
 } from "@/lib/auth/session";
 
 type AuthStatus = "loading" | "authenticated" | "unauthenticated";
@@ -39,105 +35,41 @@ type AuthContextValue = {
   signOut: () => Promise<void>;
   invalidateSession: () => void;
   refreshSession: () => Promise<AuthSession | null>;
-  getValidAccessToken: () => Promise<string | null>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
-
-function mergeCurrentUser(
-  session: AuthSession,
-  currentUser: Awaited<ReturnType<typeof getCurrentUser>>,
-) {
-  return {
-    ...session,
-    tenant: currentUser.tenant,
-    user: currentUser.user,
-  } satisfies AuthSession;
-}
-
-async function refreshStoredSession({
-  setSession,
-  setStatus,
-}: {
-  setSession: (value: AuthSession | null) => void;
-  setStatus: (value: AuthStatus) => void;
-}) {
-  const storedSession = readAuthSession();
-
-  if (!storedSession || isRefreshTokenExpired(storedSession)) {
-    clearAuthSession();
-    setSession(null);
-    setStatus("unauthenticated");
-    return null;
-  }
-
-  try {
-    const refreshedSession = writeAuthSession(
-      await refreshCurrentSession(storedSession.refresh_token),
-    );
-    const currentUser = await getCurrentUser(refreshedSession.access_token);
-    const normalizedSession = writeAuthSession(
-      mergeCurrentUser(refreshedSession, currentUser),
-    );
-
-    setSession(normalizedSession);
-    setStatus("authenticated");
-    return normalizedSession;
-  } catch {
-    clearAuthSession();
-    setSession(null);
-    setStatus("unauthenticated");
-    return null;
-  }
-}
 
 export function AuthProvider({ children }: PropsWithChildren) {
   const [status, setStatus] = useState<AuthStatus>("loading");
   const [session, setSession] = useState<AuthSession | null>(null);
 
-  function invalidateSession() {
-    clearAuthSession();
+  const invalidateSession = useCallback(() => {
     setSession(null);
     setStatus("unauthenticated");
-  }
+  }, []);
 
   async function refreshSession() {
-    return refreshStoredSession({
-      setSession,
-      setStatus,
-    });
-  }
-
-  async function getValidAccessToken() {
-    const currentSession = session ?? readAuthSession();
-
-    if (!currentSession) {
+    try {
+      const nextSession = await getCurrentUser();
+      setSession(nextSession);
+      setStatus("authenticated");
+      return nextSession;
+    } catch {
       invalidateSession();
       return null;
     }
-
-    if (!isAccessTokenExpired(currentSession)) {
-      return currentSession.access_token;
-    }
-
-    const refreshedSession = await refreshSession();
-    return refreshedSession?.access_token ?? null;
   }
 
   async function signIn(credentials: LoginCredentials) {
-    const nextSession = writeAuthSession(await loginWithPassword(credentials));
+    const nextSession = await loginWithPassword(credentials);
     setSession(nextSession);
     setStatus("authenticated");
     return nextSession;
   }
 
   async function signOut() {
-    const currentSession = session ?? readAuthSession();
-
     try {
-      if (currentSession?.refresh_token) {
-        await logoutCurrentSession(currentSession.refresh_token);
-      }
+      await logoutCurrentSession();
     } finally {
       invalidateSession();
     }
@@ -147,47 +79,23 @@ export function AuthProvider({ children }: PropsWithChildren) {
     let isActive = true;
 
     async function hydrateSession() {
-      const storedSession = readAuthSession();
+      try {
+        const nextSession = await getCurrentUser();
 
-      if (!storedSession) {
         if (!isActive) {
           return;
         }
-        setSession(null);
-        setStatus("unauthenticated");
-        return;
-      }
 
-      if (isRefreshTokenExpired(storedSession)) {
-        clearAuthSession();
-        if (!isActive) {
-          return;
-        }
-        setSession(null);
-        setStatus("unauthenticated");
-        return;
-      }
-
-      if (!isAccessTokenExpired(storedSession)) {
-        if (!isActive) {
-          return;
-        }
-        setSession(storedSession);
+        setSession(nextSession);
         setStatus("authenticated");
-        return;
+      } catch {
+        if (!isActive) {
+          return;
+        }
+
+        setSession(null);
+        setStatus("unauthenticated");
       }
-
-      const refreshedSession = await refreshStoredSession({
-        setSession,
-        setStatus,
-      });
-
-      if (!isActive || refreshedSession) {
-        return;
-      }
-
-      setSession(null);
-      setStatus("unauthenticated");
     }
 
     void hydrateSession();
@@ -196,6 +104,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
       isActive = false;
     };
   }, []);
+
+  useEffect(() => {
+    function handleUnauthorized() {
+      invalidateSession();
+    }
+
+    window.addEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
+
+    return () => {
+      window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, handleUnauthorized);
+    };
+  }, [invalidateSession]);
 
   return (
     <AuthContext
@@ -209,7 +129,6 @@ export function AuthProvider({ children }: PropsWithChildren) {
         signOut,
         invalidateSession,
         refreshSession,
-        getValidAccessToken,
       }}
     >
       {children}

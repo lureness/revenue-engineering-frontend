@@ -71,9 +71,9 @@ const foundationBlocks = [
   },
   {
     eyebrow: "Data Layer",
-    title: "Cliente HTTP e sessão local",
+    title: "Proxy interno e sessão segura",
     description:
-      "A integração com o backend já tem base de env, request client e persistência local de tokens.",
+      "A integração com o backend já passa por um proxy do Next com cookies httpOnly e refresh centralizado.",
   },
 ] as const;
 
@@ -157,7 +157,7 @@ export default function LandingPage() {
                     {publicEnv.apiBaseUrl}
                   </p>
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Valor lido de `NEXT_PUBLIC_API_BASE_URL`.
+                    Backend consumido pelo proxy interno do Next.
                   </p>
                 </div>
               </CardContent>
@@ -273,7 +273,7 @@ export default function LandingPage() {
             <div className="grid gap-3">
               {[
                 "Cliente HTTP centralizado com tratamento de erro e request id.",
-                "Sessão local preparada para access token, refresh token, tenant e usuário.",
+                "Sessão protegida por cookies httpOnly e proxy interno para a API.",
                 "Shell pronto para módulos autenticados e navegação futura.",
               ].map((item, index, items) => (
                 <Card key={item} size="sm" className="bg-background/80">

@@ -192,7 +192,7 @@ export function LoginForm() {
                 onChange={(event) => setPassword(event.currentTarget.value)}
               />
               <FieldDescription>
-                Se a sessão expirar, o frontend usa o refresh token localmente.
+                A sessão autenticada é mantida por cookies seguros no servidor.
               </FieldDescription>
             </FieldContent>
           </Field>

@@ -270,8 +270,8 @@ function SidebarContent({
             <div className="space-y-2">
               <Badge variant="secondary">Estrutura</Badge>
               <p className="text-sm leading-6 text-muted-foreground">
-                Shell, cliente HTTP e sessão local já estão prontos para receber
-                auth, dashboard e workflows do produto.
+                Shell, proxy interno e sessão segura já estão prontos para
+                receber auth, dashboard e workflows do produto.
               </p>
             </div>
             <Link

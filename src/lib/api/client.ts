@@ -1,9 +1,8 @@
-import { publicEnv } from "@/lib/env";
+import { dispatchAuthUnauthorizedEvent } from "@/lib/auth/events";
 
 type QueryValue = string | number | boolean | null | undefined;
 
 export type ApiRequestOptions = Omit<RequestInit, "body" | "headers"> & {
-  accessToken?: string;
   body?: BodyInit | object | null;
   headers?: HeadersInit;
   query?: Record<string, QueryValue>;
@@ -40,20 +39,18 @@ export class ApiClientError extends Error {
 
 function buildApiUrl(path: string, query?: Record<string, QueryValue>) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  const url = new URL(`${publicEnv.apiBaseUrl}${normalizedPath}`);
+  const url = new URL(`/api/backend${normalizedPath}`, "http://local.test");
 
-  if (!query) {
-    return url.toString();
-  }
-
-  for (const [key, value] of Object.entries(query)) {
-    if (value === undefined || value === null || value === "") {
-      continue;
+  if (query) {
+    for (const [key, value] of Object.entries(query)) {
+      if (value === undefined || value === null || value === "") {
+        continue;
+      }
+      url.searchParams.set(key, String(value));
     }
-    url.searchParams.set(key, String(value));
   }
 
-  return url.toString();
+  return `${url.pathname}${url.search}`;
 }
 
 function resolveBody(body: ApiRequestOptions["body"]) {
@@ -76,10 +73,6 @@ function resolveBody(body: ApiRequestOptions["body"]) {
 function buildHeaders(options: ApiRequestOptions) {
   const headers = new Headers(options.headers);
   const body = options.body;
-
-  if (options.accessToken) {
-    headers.set("Authorization", `Bearer ${options.accessToken}`);
-  }
 
   if (!headers.has("Accept")) {
     headers.set("Accept", "application/json");
@@ -145,11 +138,16 @@ export async function apiRequest<TResponse>(
     ...options,
     body: resolveBody(options.body),
     headers: buildHeaders(options),
+    credentials: "same-origin",
   });
 
   const payload = await parseResponse(response);
 
   if (!response.ok) {
+    if (response.status === 401) {
+      dispatchAuthUnauthorizedEvent();
+    }
+
     throw new ApiClientError({
       status: response.status,
       message: extractErrorMessage(payload, response.status),
