@@ -84,3 +84,29 @@ export type ObservabilityDashboardViewItem = ObservabilityDashboardItem & {
   view: ObservabilityDashboardViewDefinitionItem;
   insights: ObservabilityDashboardInsightGroupItem[];
 };
+
+export type ObservabilityDrilldownDefinitionItem = {
+  code: string;
+  domain: string;
+  name: string;
+  description: string;
+  entity_type: string;
+  path_template: string;
+};
+
+export type ObservabilityDrilldownEntityItem = {
+  id: string;
+  type: string;
+  name: string;
+  description: string | null;
+  metadata: Record<string, unknown> | null;
+};
+
+export type ObservabilityDrilldownItem = {
+  window_start: string;
+  window_end: string;
+  entity: ObservabilityDrilldownEntityItem;
+  request_summary: ObservabilityDashboardSummary;
+  sections: ObservabilityDashboardInsightGroupItem[];
+  recent_errors: ApiRequestLogItem[];
+};

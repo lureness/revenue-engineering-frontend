@@ -2,6 +2,7 @@ import { apiRequest } from "@/lib/api/client";
 import type {
   ObservabilityDashboardViewDefinitionItem,
   ObservabilityDashboardViewItem,
+  ObservabilityDrilldownItem,
 } from "@/lib/observability/types";
 
 type DashboardQuery = {
@@ -26,6 +27,34 @@ export async function getObservabilityDashboardView(
 ) {
   return apiRequest<ObservabilityDashboardViewItem>(
     `/observability/dashboard/views/${viewCode}`,
+    {
+      method: "GET",
+      query,
+      cache: "no-store",
+    },
+  );
+}
+
+export async function getMessagingSenderDrilldown(
+  whatsappSenderId: string,
+  query: Pick<DashboardQuery, "hours"> = {},
+) {
+  return apiRequest<ObservabilityDrilldownItem>(
+    `/observability/drilldowns/messaging/senders/${whatsappSenderId}`,
+    {
+      method: "GET",
+      query,
+      cache: "no-store",
+    },
+  );
+}
+
+export async function getMessagingProviderAccountDrilldown(
+  providerAccountId: string,
+  query: Pick<DashboardQuery, "hours"> = {},
+) {
+  return apiRequest<ObservabilityDrilldownItem>(
+    `/observability/drilldowns/messaging/provider-accounts/${providerAccountId}`,
     {
       method: "GET",
       query,

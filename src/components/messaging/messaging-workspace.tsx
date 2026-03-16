@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  AlertTriangle,
   CheckCircle2,
+  Eye,
   Loader2,
   MessageCircleMore,
   RadioTower,
@@ -18,6 +20,13 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Empty,
   EmptyDescription,
@@ -66,7 +75,17 @@ import type {
   ProviderAccountItem,
   WhatsAppSenderItem,
 } from "@/lib/messaging/types";
-import { formatDateTime, formatRequestCount } from "@/lib/observability/format";
+import {
+  getMessagingProviderAccountDrilldown,
+  getMessagingSenderDrilldown,
+} from "@/lib/observability/api";
+import {
+  formatDateTime,
+  formatDuration,
+  formatPercentage,
+  formatRequestCount,
+} from "@/lib/observability/format";
+import type { ObservabilityDrilldownItem } from "@/lib/observability/types";
 import {
   TENANT_MESSAGES_READ_PERMISSION,
   TENANT_PROVIDER_ACCOUNTS_MANAGE_PERMISSION,
@@ -154,6 +173,379 @@ function getMessageStatusVariant(status: string) {
   return "outline" as const;
 }
 
+function RecentErrorsList({
+  errors,
+}: {
+  errors: ObservabilityDrilldownItem["recent_errors"];
+}) {
+  if (errors.length === 0) {
+    return (
+      <Empty className="border border-border/70 bg-background/70">
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <AlertTriangle className="size-4" />
+          </EmptyMedia>
+          <EmptyTitle>Nenhum erro recente</EmptyTitle>
+          <EmptyDescription>
+            Não houve falhas recentes para essa entidade no recorte selecionado.
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
+  }
+
+  return (
+    <div className="grid gap-3">
+      {errors.map((item) => (
+        <div
+          key={item.id}
+          className="rounded-[1.2rem] border border-border/70 bg-background/85 px-4 py-4"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <Badge variant="destructive">{item.status_code}</Badge>
+                <span className="text-sm font-medium text-foreground">
+                  {item.method} {item.route_path}
+                </span>
+              </div>
+              <p className="text-sm leading-6 text-muted-foreground">
+                {item.error_detail ?? "Erro sem detalhe adicional."}
+              </p>
+            </div>
+            <div className="text-right text-xs uppercase tracking-[0.16em] text-muted-foreground">
+              <div>{formatDateTime(item.created_at)}</div>
+              <div className="mt-1">{formatDuration(item.duration_ms)}</div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function formatMetadataValue(value: unknown) {
+  if (typeof value === "boolean") {
+    return value ? "Sim" : "Não";
+  }
+
+  if (typeof value === "number") {
+    return formatRequestCount(value);
+  }
+
+  if (typeof value === "string") {
+    return value;
+  }
+
+  if (value === null || value === undefined) {
+    return "Não informado";
+  }
+
+  return JSON.stringify(value);
+}
+
+function DrilldownDialog({
+  open,
+  onOpenChange,
+  title,
+  description,
+  drilldown,
+  errorMessage,
+  isLoading,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description: string;
+  drilldown: ObservabilityDrilldownItem | null;
+  errorMessage: string | null;
+  isLoading: boolean;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] max-w-4xl overflow-y-auto rounded-[2rem] p-0 sm:max-w-4xl">
+        <div className="grid gap-6 p-6">
+          <DialogHeader className="gap-3">
+            <Badge variant="secondary" className="w-fit">
+              Drilldown operacional
+            </Badge>
+            <DialogTitle className="font-serif text-3xl tracking-tight text-foreground">
+              {title}
+            </DialogTitle>
+            <DialogDescription className="leading-7">
+              {description}
+            </DialogDescription>
+          </DialogHeader>
+
+          {isLoading ? (
+            <div className="flex min-h-56 items-center justify-center">
+              <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Carregando detalhes operacionais...
+              </div>
+            </div>
+          ) : errorMessage ? (
+            <div className="rounded-[1.2rem] border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              {errorMessage}
+            </div>
+          ) : drilldown ? (
+            <div className="grid gap-6">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <MetricCard
+                  label="Requisições"
+                  value={formatRequestCount(
+                    drilldown.request_summary.total_requests,
+                  )}
+                  description="Chamadas da API relacionadas a esta entidade no recorte."
+                  icon={RadioTower}
+                />
+                <MetricCard
+                  label="Erros"
+                  value={formatRequestCount(
+                    drilldown.request_summary.error_requests,
+                  )}
+                  description="Falhas registradas para a entidade no mesmo período."
+                  icon={AlertTriangle}
+                />
+                <MetricCard
+                  label="Taxa de erro"
+                  value={formatPercentage(drilldown.request_summary.error_rate)}
+                  description="Relação entre falhas e total de requisições."
+                  icon={RefreshCcw}
+                />
+                <MetricCard
+                  label="Duração média"
+                  value={formatDuration(
+                    drilldown.request_summary.average_duration_ms,
+                  )}
+                  description="Tempo médio de resposta das rotas afetadas."
+                  icon={Send}
+                />
+              </div>
+
+              <Card className="bg-card/85 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-xl tracking-tight text-foreground">
+                    Contexto da entidade
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium text-foreground">
+                      {drilldown.entity.name}
+                    </p>
+                    {drilldown.entity.description ? (
+                      <p className="text-sm leading-6 text-muted-foreground">
+                        {drilldown.entity.description}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {drilldown.entity.metadata ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {Object.entries(drilldown.entity.metadata).map(
+                        ([key, value]) => (
+                          <div
+                            key={key}
+                            className="rounded-[1.2rem] border border-border/70 bg-background/85 px-4 py-3"
+                          >
+                            <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                              {key}
+                            </p>
+                            <p
+                              className="mt-1 text-sm font-medium text-foreground"
+                              title={formatMetadataValue(value)}
+                            >
+                              {formatMetadataValue(value)}
+                            </p>
+                          </div>
+                        ),
+                      )}
+                    </div>
+                  ) : null}
+                </CardContent>
+              </Card>
+
+              <div className="grid gap-6 xl:grid-cols-2">
+                {drilldown.sections.map((section) => (
+                  <Card key={section.code} className="bg-card/85 shadow-sm">
+                    <CardHeader>
+                      <CardTitle className="text-lg tracking-tight text-foreground">
+                        {section.name}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-3">
+                      {section.metrics.map((metric) => (
+                        <div
+                          key={metric.key}
+                          className="rounded-[1.2rem] border border-border/70 bg-background/85 px-4 py-3"
+                        >
+                          <div className="space-y-1">
+                            <p className="text-sm font-medium text-foreground">
+                              {metric.label}
+                            </p>
+                            {metric.description ? (
+                              <p className="text-sm leading-6 text-muted-foreground">
+                                {metric.description}
+                              </p>
+                            ) : null}
+                            <p className="font-serif text-3xl tracking-tight text-foreground">
+                              {typeof metric.value === "number"
+                                ? formatRequestCount(metric.value)
+                                : metric.value}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+
+              <Card className="bg-card/85 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="text-xl tracking-tight text-foreground">
+                    Erros recentes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <RecentErrorsList errors={drilldown.recent_errors} />
+                </CardContent>
+              </Card>
+            </div>
+          ) : null}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function MessageDetailDialog({
+  message,
+  open,
+  onOpenChange,
+}: {
+  message: MessageItem | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  if (!message) {
+    return null;
+  }
+
+  const referenceDate =
+    message.received_at ?? message.sent_at ?? message.created_at;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto rounded-[2rem] p-0 sm:max-w-3xl">
+        <div className="grid gap-6 p-6">
+          <DialogHeader className="gap-3">
+            <Badge variant="secondary" className="w-fit">
+              Mensagem
+            </Badge>
+            <DialogTitle className="font-serif text-3xl tracking-tight text-foreground">
+              {getMessageChannelLabel(message.channel)} ·{" "}
+              {getMessageDirectionLabel(message.direction)}
+            </DialogTitle>
+            <DialogDescription className="leading-7">
+              Visualize o conteúdo, o status e o contexto bruto dessa mensagem.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-[1.2rem] border border-border/70 bg-background/85 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                Contato
+              </p>
+              <p className="mt-1 text-sm font-medium text-foreground">
+                {getMessageCounterpartyLabel(message)}
+              </p>
+            </div>
+            <div className="rounded-[1.2rem] border border-border/70 bg-background/85 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                Status
+              </p>
+              <div className="mt-2">
+                <Badge variant={getMessageStatusVariant(message.status)}>
+                  {message.status}
+                </Badge>
+              </div>
+            </div>
+            <div className="rounded-[1.2rem] border border-border/70 bg-background/85 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                Data de referência
+              </p>
+              <p className="mt-1 text-sm font-medium text-foreground">
+                {formatDateTime(referenceDate)}
+              </p>
+            </div>
+            <div className="rounded-[1.2rem] border border-border/70 bg-background/85 px-4 py-3">
+              <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                Provider
+              </p>
+              <p className="mt-1 text-sm font-medium text-foreground">
+                {message.provider}
+              </p>
+            </div>
+          </div>
+
+          {message.subject ? (
+            <Card className="bg-card/85 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg tracking-tight text-foreground">
+                  Assunto
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm leading-7 text-foreground">
+                  {message.subject}
+                </p>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {message.body_text ? (
+            <Card className="bg-card/85 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg tracking-tight text-foreground">
+                  Conteúdo
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <pre className="overflow-x-auto whitespace-pre-wrap rounded-[1.2rem] bg-background/85 p-4 text-sm leading-7 text-foreground">
+                  {message.body_text}
+                </pre>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {message.error_detail ? (
+            <div className="rounded-[1.2rem] border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+              {message.error_detail}
+            </div>
+          ) : null}
+
+          {message.payload ? (
+            <Card className="bg-card/85 shadow-sm">
+              <CardHeader>
+                <CardTitle className="text-lg tracking-tight text-foreground">
+                  Payload bruto
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <pre className="overflow-x-auto whitespace-pre-wrap rounded-[1.2rem] bg-background/85 p-4 text-xs leading-6 text-foreground">
+                  {JSON.stringify(message.payload, null, 2)}
+                </pre>
+              </CardContent>
+            </Card>
+          ) : null}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function MessagingWorkspace() {
   const searchParams = useSearchParams();
   const { tenant } = useAuth();
@@ -202,6 +594,27 @@ export function MessagingWorkspace() {
   const [selectedChannel, setSelectedChannel] = useState("");
   const [selectedDirection, setSelectedDirection] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
+  const [selectedProviderAccount, setSelectedProviderAccount] =
+    useState<ProviderAccountItem | null>(null);
+  const [selectedSender, setSelectedSender] =
+    useState<WhatsAppSenderItem | null>(null);
+  const [selectedMessage, setSelectedMessage] = useState<MessageItem | null>(
+    null,
+  );
+  const [providerDrilldown, setProviderDrilldown] =
+    useState<ObservabilityDrilldownItem | null>(null);
+  const [senderDrilldown, setSenderDrilldown] =
+    useState<ObservabilityDrilldownItem | null>(null);
+  const [providerDrilldownError, setProviderDrilldownError] = useState<
+    string | null
+  >(null);
+  const [senderDrilldownError, setSenderDrilldownError] = useState<
+    string | null
+  >(null);
+  const [isLoadingProviderDrilldown, setIsLoadingProviderDrilldown] =
+    useState(false);
+  const [isLoadingSenderDrilldown, setIsLoadingSenderDrilldown] =
+    useState(false);
   const isProviderSetupFlow = searchParams.get("setup") === "provider";
 
   const activeSendersCount = senders.filter(
@@ -493,6 +906,59 @@ export function MessagingWorkspace() {
     }
   }
 
+  async function handleOpenProviderDetails(account: ProviderAccountItem) {
+    setSelectedProviderAccount(account);
+    setProviderDrilldown(null);
+    setProviderDrilldownError(null);
+    setIsLoadingProviderDrilldown(true);
+
+    try {
+      const nextDrilldown = await getMessagingProviderAccountDrilldown(
+        account.id,
+        { hours: 24 },
+      );
+      setProviderDrilldown(nextDrilldown);
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle:
+          "Não foi possível carregar os detalhes dessa conta de provedor.",
+      });
+      setProviderDrilldownError(
+        presentation.description
+          ? `${presentation.title} ${presentation.description}`
+          : presentation.title,
+      );
+    } finally {
+      setIsLoadingProviderDrilldown(false);
+    }
+  }
+
+  async function handleOpenSenderDetails(sender: WhatsAppSenderItem) {
+    setSelectedSender(sender);
+    setSenderDrilldown(null);
+    setSenderDrilldownError(null);
+    setIsLoadingSenderDrilldown(true);
+
+    try {
+      const nextDrilldown = await getMessagingSenderDrilldown(sender.id, {
+        hours: 24,
+      });
+      setSenderDrilldown(nextDrilldown);
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle:
+          "Não foi possível carregar os detalhes desse sender agora.",
+      });
+      setSenderDrilldownError(
+        presentation.description
+          ? `${presentation.title} ${presentation.description}`
+          : presentation.title,
+      );
+    } finally {
+      setIsLoadingSenderDrilldown(false);
+    }
+  }
+
   if (accessStatus === "loading" || isLoadingWorkspace) {
     return (
       <Card className="bg-card/85 shadow-sm">
@@ -638,7 +1104,22 @@ export function MessagingWorkspace() {
                             ) : null}
                           </div>
                         </div>
-                        <Badge variant="outline">{account.provider}</Badge>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Badge variant="outline">{account.provider}</Badge>
+                          {canReadProviderAccounts ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                void handleOpenProviderDetails(account);
+                              }}
+                            >
+                              <Eye className="size-4" />
+                              Ver detalhes
+                            </Button>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -793,24 +1274,37 @@ export function MessagingWorkspace() {
                                 ) : null}
                               </div>
                             </div>
-                            {canManageSenders ? (
+                            {canReadSenders ? (
                               <div className="flex flex-wrap gap-2">
                                 <Button
                                   type="button"
                                   variant="outline"
                                   size="sm"
-                                  disabled={pendingSenderId === sender.id}
                                   onClick={() => {
-                                    void handleSyncSender(sender.id);
+                                    void handleOpenSenderDetails(sender);
                                   }}
                                 >
-                                  {pendingSenderId === sender.id ? (
-                                    <Loader2 className="size-4 animate-spin" />
-                                  ) : (
-                                    <RefreshCcw className="size-4" />
-                                  )}
-                                  Sincronizar
+                                  <Eye className="size-4" />
+                                  Ver detalhes
                                 </Button>
+                                {canManageSenders ? (
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={pendingSenderId === sender.id}
+                                    onClick={() => {
+                                      void handleSyncSender(sender.id);
+                                    }}
+                                  >
+                                    {pendingSenderId === sender.id ? (
+                                      <Loader2 className="size-4 animate-spin" />
+                                    ) : (
+                                      <RefreshCcw className="size-4" />
+                                    )}
+                                    Sincronizar
+                                  </Button>
+                                ) : null}
                               </div>
                             ) : null}
                           </div>
@@ -1138,7 +1632,13 @@ export function MessagingWorkspace() {
                       message.created_at;
 
                     return (
-                      <TableRow key={message.id}>
+                      <TableRow
+                        key={message.id}
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setSelectedMessage(message);
+                        }}
+                      >
                         <TableCell className="max-w-0">
                           <div className="min-w-0 space-y-1">
                             <p className="font-medium text-foreground">
@@ -1198,6 +1698,56 @@ export function MessagingWorkspace() {
           </CardContent>
         </Card>
       </div>
+
+      <DrilldownDialog
+        open={Boolean(selectedProviderAccount)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedProviderAccount(null);
+            setProviderDrilldown(null);
+            setProviderDrilldownError(null);
+          }
+        }}
+        title={
+          selectedProviderAccount
+            ? getProviderAccountDisplayName(selectedProviderAccount)
+            : "Conta do provedor"
+        }
+        description="Veja volume, erros recentes e sinais operacionais da subaccount conectada a este workspace."
+        drilldown={providerDrilldown}
+        errorMessage={providerDrilldownError}
+        isLoading={isLoadingProviderDrilldown}
+      />
+
+      <DrilldownDialog
+        open={Boolean(selectedSender)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedSender(null);
+            setSenderDrilldown(null);
+            setSenderDrilldownError(null);
+          }
+        }}
+        title={
+          selectedSender
+            ? getSenderDisplayName(selectedSender)
+            : "Sender do WhatsApp"
+        }
+        description="Acompanhe atividade, erros e métricas operacionais específicas deste sender."
+        drilldown={senderDrilldown}
+        errorMessage={senderDrilldownError}
+        isLoading={isLoadingSenderDrilldown}
+      />
+
+      <MessageDetailDialog
+        open={Boolean(selectedMessage)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedMessage(null);
+          }
+        }}
+        message={selectedMessage}
+      />
     </div>
   );
 }
