@@ -33,7 +33,7 @@ const productPillars = [
   {
     title: "Autenticação multitenant",
     description:
-      "Onboarding de tenant, sessões, verificação de e-mail, reset de senha e convites já prontos no backend.",
+      "Onboarding de workspace, sessões, verificação de e-mail, reset de senha e convites já prontos no backend.",
     icon: ShieldCheck,
   },
   {

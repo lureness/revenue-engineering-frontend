@@ -6,7 +6,7 @@ import { PublicOnly } from "@/components/auth/public-only";
 import { SignupForm } from "@/components/auth/signup-form";
 
 const onboardingFeatures = [
-  "Criação do tenant e do owner iniciais em uma única etapa.",
+  "Criação do workspace e do owner iniciais em uma única etapa.",
   "Sugestão automática de slug compatível com a API.",
   "Confirmação de senha antes do bootstrap.",
   "Reenvio do e-mail de verificação após o onboarding.",
@@ -20,7 +20,7 @@ function SignupPageContent() {
         eyebrow="Public onboarding slice"
         title={
           <>
-            Crie o tenant inicial e comece com a base{" "}
+            Crie o workspace inicial e comece com a base{" "}
             <span className="gradient-text">multitenant da Lureness</span>.
           </>
         }

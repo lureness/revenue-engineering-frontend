@@ -345,14 +345,17 @@ function SidebarContent({
 
           <Card size="sm" className="bg-card/85 shadow-sm">
             <CardContent className="grid gap-4 pt-3">
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <Avatar size="lg" className="after:hidden">
                   <AvatarFallback className="bg-foreground text-sm font-medium text-background">
                     {userInitials}
                   </AvatarFallback>
                 </Avatar>
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium text-foreground">
+                <div className="min-w-0 flex-1 overflow-hidden">
+                  <p
+                    className="block w-full truncate text-sm font-medium text-foreground"
+                    title={userEmail ?? "Conta autenticada"}
+                  >
                     {userEmail ?? "Conta autenticada"}
                   </p>
                   <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
@@ -361,11 +364,14 @@ function SidebarContent({
                 </div>
               </div>
 
-              <div className="rounded-[1.2rem] border border-border/70 bg-background/85 px-4 py-3">
+              <div className="min-w-0 rounded-[1.2rem] border border-border/70 bg-background/85 px-4 py-3">
                 <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                  Tenant ativo
+                  Workspace ativo
                 </p>
-                <p className="mt-1 text-sm font-medium text-foreground">
+                <p
+                  className="mt-1 block w-full truncate text-sm font-medium text-foreground"
+                  title={tenantName ?? "Workspace atual"}
+                >
                   {tenantName ?? "Workspace atual"}
                 </p>
               </div>

@@ -69,7 +69,7 @@ export function SignupForm() {
     const normalizedEmail = adminEmail.trim().toLowerCase();
 
     if (normalizedTenantName.length < 2) {
-      toast.error("Informe um nome de tenant com pelo menos 2 caracteres.");
+      toast.error("Informe um nome de workspace com pelo menos 2 caracteres.");
       return;
     }
 
@@ -163,7 +163,7 @@ export function SignupForm() {
               Falta verificar o seu e-mail
             </CardTitle>
             <CardDescription className="text-sm leading-7">
-              O tenant inicial já foi criado, mas o login só será liberado
+              O workspace inicial já foi criado, mas o login só será liberado
               depois que você confirmar o endereço de e-mail enviado para o
               owner.
             </CardDescription>
@@ -175,7 +175,7 @@ export function SignupForm() {
             <CardContent className="grid gap-3 pt-4">
               <div className="space-y-1">
                 <p className="text-xs font-medium tracking-[0.16em] text-muted-foreground uppercase">
-                  Tenant
+                  Workspace
                 </p>
                 <p className="text-sm font-medium text-foreground">
                   {createdAccount.tenant.name}
@@ -231,11 +231,11 @@ export function SignupForm() {
             <Building2 className="size-5" />
           </div>
           <CardTitle className="font-serif text-3xl tracking-tight text-foreground">
-            Criar o tenant inicial
+            Criar o workspace inicial
           </CardTitle>
           <CardDescription className="text-sm leading-7">
-            Este fluxo cria o tenant e a conta owner iniciais. Depois disso, o
-            backend envia o link de verificação por e-mail.
+            Este fluxo cria o workspace e a conta owner iniciais. Depois disso,
+            o backend envia o link de verificação por e-mail.
           </CardDescription>
         </div>
       </CardHeader>
@@ -243,7 +243,7 @@ export function SignupForm() {
       <CardContent className="px-6 pb-6 md:px-7 md:pb-7">
         <form className="grid gap-5" onSubmit={handleSubmit}>
           <Field>
-            <FieldLabel htmlFor="tenant-name">Nome do tenant</FieldLabel>
+            <FieldLabel htmlFor="tenant-name">Nome do workspace</FieldLabel>
             <FieldContent>
               <Input
                 id="tenant-name"
@@ -259,7 +259,7 @@ export function SignupForm() {
           </Field>
 
           <Field>
-            <FieldLabel htmlFor="tenant-slug">Slug do tenant</FieldLabel>
+            <FieldLabel htmlFor="tenant-slug">Slug do workspace</FieldLabel>
             <FieldContent>
               <Input
                 id="tenant-slug"
