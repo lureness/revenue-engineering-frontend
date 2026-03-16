@@ -39,11 +39,38 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   "tenant_slug already exists": {
     title: "Esse identificador de workspace já está em uso.",
   },
+  "team_slug already exists": {
+    title: "Esse identificador de time já está em uso.",
+  },
   "admin_email already exists": {
     title: "Esse e-mail já está em uso.",
   },
   "unable to create tenant bootstrap data": {
     title: "Não foi possível criar a conta inicial agora.",
+  },
+  "unable to create team": {
+    title: "Não foi possível criar o time agora.",
+  },
+  "pending invite already exists for this email": {
+    title: "Já existe um invite ativo para esse e-mail.",
+  },
+  "email already belongs to another tenant": {
+    title: "Esse e-mail já pertence a outro tenant.",
+  },
+  "user already belongs to the team": {
+    title: "Essa pessoa já faz parte do time.",
+  },
+  "invite is no longer active": {
+    title: "Esse invite não está mais ativo.",
+  },
+  "team must have at least one admin": {
+    title: "O time precisa manter pelo menos um admin.",
+  },
+  "team not found": {
+    title: "O time informado não foi encontrado.",
+  },
+  "team member not found": {
+    title: "O membro informado não foi encontrado.",
   },
   "invalid current password": {
     title: "A senha atual informada está incorreta.",

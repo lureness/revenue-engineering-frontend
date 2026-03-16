@@ -53,9 +53,9 @@ const navigationItems = [
   },
   {
     title: "Times",
-    href: "#",
+    href: "/app/teams",
     icon: UsersRound,
-    status: "próximo",
+    status: "ativo",
   },
   {
     title: "Mensageria",
@@ -88,6 +88,11 @@ const pageContentMap = {
     eyebrow: "Usuário",
     title: "Conta e preferências",
     description: "Gerencie a senha e os ajustes da sua conta autenticada.",
+  },
+  "/app/teams": {
+    eyebrow: "Times",
+    title: "Gestão de times",
+    description: "Crie times, acompanhe membros e administre invites ativos.",
   },
 } as const;
 

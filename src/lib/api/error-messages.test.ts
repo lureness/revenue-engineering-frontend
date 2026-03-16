@@ -81,4 +81,19 @@ describe("formatApiErrorMessage", () => {
       title: "O link de redefinição é inválido ou expirou.",
     });
   });
+
+  it("traduz conflitos de team invite", () => {
+    const error = new ApiClientError({
+      status: 409,
+      message: "pending invite already exists for this email",
+      requestId: "req_902",
+      detail: {
+        detail: "pending invite already exists for this email",
+      },
+    });
+
+    expect(formatApiErrorMessage(error)).toEqual({
+      title: "Já existe um invite ativo para esse e-mail.",
+    });
+  });
 });
