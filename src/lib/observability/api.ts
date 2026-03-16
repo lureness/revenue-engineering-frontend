@@ -2,6 +2,7 @@ import { apiRequest } from "@/lib/api/client";
 import type {
   ObservabilityDashboardViewDefinitionItem,
   ObservabilityDashboardViewItem,
+  ObservabilityDrilldownDefinitionItem,
   ObservabilityDrilldownItem,
 } from "@/lib/observability/types";
 
@@ -35,6 +36,44 @@ export async function getObservabilityDashboardView(
   );
 }
 
+export async function getObservabilityDrilldowns() {
+  return apiRequest<ObservabilityDrilldownDefinitionItem[]>(
+    "/observability/drilldowns",
+    {
+      method: "GET",
+      cache: "no-store",
+    },
+  );
+}
+
+export async function getAuthUserDrilldown(
+  userId: string,
+  query: Pick<DashboardQuery, "hours"> = {},
+) {
+  return apiRequest<ObservabilityDrilldownItem>(
+    `/observability/drilldowns/auth/users/${userId}`,
+    {
+      method: "GET",
+      query,
+      cache: "no-store",
+    },
+  );
+}
+
+export async function getAccessUserDrilldown(
+  userId: string,
+  query: Pick<DashboardQuery, "hours"> = {},
+) {
+  return apiRequest<ObservabilityDrilldownItem>(
+    `/observability/drilldowns/access/users/${userId}`,
+    {
+      method: "GET",
+      query,
+      cache: "no-store",
+    },
+  );
+}
+
 export async function getMessagingSenderDrilldown(
   whatsappSenderId: string,
   query: Pick<DashboardQuery, "hours"> = {},
@@ -55,6 +94,20 @@ export async function getMessagingProviderAccountDrilldown(
 ) {
   return apiRequest<ObservabilityDrilldownItem>(
     `/observability/drilldowns/messaging/provider-accounts/${providerAccountId}`,
+    {
+      method: "GET",
+      query,
+      cache: "no-store",
+    },
+  );
+}
+
+export async function getTeamDrilldown(
+  teamId: string,
+  query: Pick<DashboardQuery, "hours"> = {},
+) {
+  return apiRequest<ObservabilityDrilldownItem>(
+    `/observability/drilldowns/teams/${teamId}`,
     {
       method: "GET",
       query,

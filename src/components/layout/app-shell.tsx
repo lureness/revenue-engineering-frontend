@@ -78,10 +78,10 @@ const navigationItems = [
   },
   {
     title: "Observabilidade",
-    href: "#",
+    href: "/app/observability",
     icon: Activity,
-    status: "próximo",
-    match: "exact",
+    status: "ativo",
+    match: "prefix",
   },
   {
     title: "RBAC",
@@ -114,6 +114,12 @@ const pageContentMap = {
     title: "Operação de mensagens",
     description:
       "Conecte provedores, acompanhe senders do WhatsApp e revise o histórico de mensagens.",
+  },
+  "/app/observability": {
+    eyebrow: "Observabilidade",
+    title: "Drilldowns e saúde operacional",
+    description:
+      "Explore métricas, erros e atividade por entidade para investigar a operação do workspace.",
   },
   "/app/rbac": {
     eyebrow: "RBAC",
@@ -351,10 +357,6 @@ function SidebarContent({
               {isActive ? (
                 <span className="pointer-events-none">
                   <Badge variant="secondary">{item.status}</Badge>
-                </span>
-              ) : item.status === "próximo" ? (
-                <span className="pointer-events-none">
-                  <Badge variant="outline">{item.status}</Badge>
                 </span>
               ) : null}
             </>
