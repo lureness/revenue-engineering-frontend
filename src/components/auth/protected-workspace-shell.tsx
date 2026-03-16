@@ -6,6 +6,7 @@ import { type PropsWithChildren, startTransition, useState } from "react";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppShell } from "@/components/layout/app-shell";
+import { ProviderOnboardingGate } from "@/components/messaging/provider-onboarding-gate";
 
 export function ProtectedWorkspaceShell({ children }: PropsWithChildren) {
   const router = useRouter();
@@ -27,6 +28,7 @@ export function ProtectedWorkspaceShell({ children }: PropsWithChildren) {
 
   return (
     <AuthGuard>
+      <ProviderOnboardingGate />
       <AppShell
         tenantName={tenant?.name}
         userEmail={user?.email}

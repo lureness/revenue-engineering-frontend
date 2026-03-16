@@ -49,6 +49,8 @@ import {
   TENANT_MESSAGES_READ_PERMISSION,
   TENANT_METRICS_READ_PERMISSION,
   TENANT_PERMISSIONS_MANAGE_PERMISSION,
+  TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION,
+  TENANT_WHATSAPP_SENDERS_READ_PERMISSION,
 } from "@/lib/rbac/permissions";
 import { cn } from "@/lib/utils";
 
@@ -69,10 +71,10 @@ const navigationItems = [
   },
   {
     title: "Mensageria",
-    href: "#",
+    href: "/app/messaging",
     icon: MessageCircleMore,
-    status: "próximo",
-    match: "exact",
+    status: "ativo",
+    match: "prefix",
   },
   {
     title: "Observabilidade",
@@ -106,6 +108,12 @@ const pageContentMap = {
     eyebrow: "Times",
     title: "Gestão de times",
     description: "Crie times, acompanhe membros e administre invites ativos.",
+  },
+  "/app/messaging": {
+    eyebrow: "Mensageria",
+    title: "Operação de mensagens",
+    description:
+      "Conecte provedores, acompanhe senders do WhatsApp e revise o histórico de mensagens.",
   },
   "/app/rbac": {
     eyebrow: "RBAC",
@@ -200,7 +208,11 @@ function SidebarContent({
     }
 
     if (item.title === "Mensageria") {
-      return !hasTenantPermission(TENANT_MESSAGES_READ_PERMISSION);
+      return !(
+        hasTenantPermission(TENANT_MESSAGES_READ_PERMISSION) ||
+        hasTenantPermission(TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION) ||
+        hasTenantPermission(TENANT_WHATSAPP_SENDERS_READ_PERMISSION)
+      );
     }
 
     if (item.title === "Observabilidade") {

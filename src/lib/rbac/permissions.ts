@@ -6,6 +6,14 @@ export const TENANT_MEMBERS_MANAGE_PERMISSION = "tenant.members.manage";
 export const TENANT_PERMISSIONS_MANAGE_PERMISSION = "tenant.permissions.manage";
 export const TENANT_MESSAGES_READ_PERMISSION = "tenant.messages.read";
 export const TENANT_METRICS_READ_PERMISSION = "tenant.metrics.read";
+export const TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION =
+  "tenant.provider_accounts.read";
+export const TENANT_PROVIDER_ACCOUNTS_MANAGE_PERMISSION =
+  "tenant.provider_accounts.manage";
+export const TENANT_WHATSAPP_SENDERS_READ_PERMISSION =
+  "tenant.whatsapp_senders.read";
+export const TENANT_WHATSAPP_SENDERS_MANAGE_PERMISSION =
+  "tenant.whatsapp_senders.manage";
 export const TEAM_MEMBERS_READ_PERMISSION = "team.members.read";
 export const TEAM_MEMBERS_MANAGE_PERMISSION = "team.members.manage";
 export const TEAM_INVITES_MANAGE_PERMISSION = "team.invites.manage";

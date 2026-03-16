@@ -93,6 +93,45 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   "missing permission: tenant.permissions.manage": {
     title: "Você não pode gerenciar permissões neste workspace.",
   },
+  "missing permission: tenant.provider_accounts.read": {
+    title: "Você não pode visualizar contas de provedor neste workspace.",
+  },
+  "missing permission: tenant.provider_accounts.manage": {
+    title: "Você não pode configurar contas de provedor neste workspace.",
+  },
+  "missing permission: tenant.whatsapp_senders.read": {
+    title: "Você não pode visualizar senders do WhatsApp neste workspace.",
+  },
+  "missing permission: tenant.whatsapp_senders.manage": {
+    title: "Você não pode gerenciar senders do WhatsApp neste workspace.",
+  },
+  "missing permission: tenant.messages.read": {
+    title: "Você não pode visualizar o histórico de mensagens deste workspace.",
+  },
+  "provider account already exists for this tenant or account SID": {
+    title: "Já existe uma conta de provedor Twilio para este workspace.",
+  },
+  "provider account not found": {
+    title: "A conta de provedor informada não foi encontrada.",
+  },
+  "whatsapp sender already exists for this phone number or sender": {
+    title: "Já existe um sender do WhatsApp para esse número ou identificador.",
+  },
+  "whatsapp sender is already provisioned on twilio": {
+    title: "Esse sender já foi provisionado na Twilio.",
+  },
+  "whatsapp sender is not provisioned on twilio": {
+    title: "Esse sender ainda não foi provisionado na Twilio.",
+  },
+  "whatsapp sender not found": {
+    title: "O sender do WhatsApp informado não foi encontrado.",
+  },
+  "profile_name is required to provision a twilio whatsapp sender": {
+    title: "Informe um nome de perfil para provisionar o sender na Twilio.",
+  },
+  "message not found": {
+    title: "A mensagem informada não foi encontrada.",
+  },
   "invalid current password": {
     title: "A senha atual informada está incorreta.",
   },
