@@ -11,7 +11,7 @@ import {
   UserRoundPlus,
   UsersRound,
 } from "lucide-react";
-import { useEffect, useEffectEvent, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { useAuth } from "@/components/auth/auth-provider";
 import { Badge } from "@/components/ui/badge";
@@ -126,7 +126,7 @@ export function TeamsWorkspace() {
     setTeamSlug(slugifyTeamName(teamName));
   }, [teamName, teamSlugManuallyEdited]);
 
-  const loadTeams = useEffectEvent(async (preferredTeamId?: string | null) => {
+  const loadTeams = useCallback(async (preferredTeamId?: string | null) => {
     setIsLoadingTeams(true);
     setTeamsError(null);
 
@@ -159,9 +159,9 @@ export function TeamsWorkspace() {
     } finally {
       setIsLoadingTeams(false);
     }
-  });
+  }, []);
 
-  const loadTeamDetails = useEffectEvent(async (teamId: string) => {
+  const loadTeamDetails = useCallback(async (teamId: string) => {
     setIsLoadingDetails(true);
     setDetailsError(null);
 
@@ -183,7 +183,7 @@ export function TeamsWorkspace() {
     } finally {
       setIsLoadingDetails(false);
     }
-  });
+  }, []);
 
   useEffect(() => {
     void loadTeams();
