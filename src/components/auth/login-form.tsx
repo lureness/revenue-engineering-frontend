@@ -23,7 +23,11 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/sonner";
-import { formatApiErrorMessage } from "@/lib/api/error-messages";
+import {
+  formatApiErrorMessage,
+  isApiErrorDetail,
+} from "@/lib/api/error-messages";
+import { resendVerificationEmail } from "@/lib/auth/api";
 import { resolveSafeRedirectPath } from "@/lib/auth/navigation";
 
 function isValidEmail(value: string) {
@@ -37,6 +41,8 @@ export function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [canResendVerification, setCanResendVerification] = useState(false);
+  const [isResendingVerification, setIsResendingVerification] = useState(false);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -45,15 +51,18 @@ export function LoginForm() {
 
     if (!isValidEmail(normalizedEmail)) {
       toast.error("Informe um e-mail válido.");
+      setCanResendVerification(false);
       return;
     }
 
     if (password.length < 8) {
       toast.error("A senha precisa ter pelo menos 8 caracteres.");
+      setCanResendVerification(false);
       return;
     }
 
     setIsSubmitting(true);
+    setCanResendVerification(false);
 
     try {
       await signIn({
@@ -67,6 +76,9 @@ export function LoginForm() {
         );
       });
     } catch (error) {
+      setCanResendVerification(
+        isApiErrorDetail(error, "email address is not verified"),
+      );
       const presentation = formatApiErrorMessage(error, {
         fallbackTitle: "Não foi possível iniciar a sessão.",
       });
@@ -75,6 +87,36 @@ export function LoginForm() {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleResendVerification() {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!isValidEmail(normalizedEmail)) {
+      toast.error(
+        "Informe o mesmo e-mail da conta para reenviar a verificação.",
+      );
+      return;
+    }
+
+    setIsResendingVerification(true);
+
+    try {
+      await resendVerificationEmail(normalizedEmail);
+      toast.success("Enviamos um novo e-mail de verificação.", {
+        description:
+          "Abra a caixa de entrada e use apenas o link mais recente.",
+      });
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Não foi possível reenviar o e-mail de verificação.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
+    } finally {
+      setIsResendingVerification(false);
     }
   }
 
@@ -153,6 +195,26 @@ export function LoginForm() {
               Voltar para a landing
             </Button>
           </div>
+
+          {canResendVerification ? (
+            <div className="rounded-[1.2rem] border border-border/70 bg-background/85 p-4">
+              <p className="text-sm leading-6 text-muted-foreground">
+                Sua conta existe, mas o e-mail ainda não foi confirmado.
+              </p>
+              <div className="mt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleResendVerification}
+                  disabled={isResendingVerification}
+                >
+                  {isResendingVerification
+                    ? "Reenviando..."
+                    : "Reenviar e-mail de verificação"}
+                </Button>
+              </div>
+            </div>
+          ) : null}
 
           <p className="text-sm leading-6 text-muted-foreground">
             Ainda não tem conta?{" "}

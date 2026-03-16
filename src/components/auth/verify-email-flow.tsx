@@ -119,7 +119,7 @@ export function VerifyEmailFlow() {
           title: presentation.title,
           description:
             presentation.description ??
-            "Solicite um novo e-mail de verificação ou tente novamente em instantes.",
+            "Se necessário, solicite um novo e-mail de verificação e use apenas o link mais recente.",
         });
       });
 

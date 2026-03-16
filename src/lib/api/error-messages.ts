@@ -18,6 +18,8 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   },
   "email address is not verified": {
     title: "Verifique o seu e-mail antes de entrar.",
+    description:
+      "Se precisar, solicite um novo e-mail de verificação a partir desta tela.",
   },
   "invalid refresh token": {
     title: "A sua sessão não é mais válida.",
@@ -48,6 +50,8 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   },
   "invalid or expired verification token": {
     title: "O link de verificação é inválido ou expirou.",
+    description:
+      "Se você pediu um novo e-mail, apenas o link mais recente continua válido.",
   },
   "invalid or expired reset token": {
     title: "O link de redefinição é inválido ou expirou.",
@@ -60,6 +64,10 @@ function getErrorDetail(error: unknown) {
   }
 
   return null;
+}
+
+export function isApiErrorDetail(error: unknown, expectedDetail: string) {
+  return getErrorDetail(error) === expectedDetail.trim().toLowerCase();
 }
 
 function getStatusFallback(status: number): ApiErrorPresentation {

@@ -99,10 +99,25 @@ function buildHeaders(options: ApiRequestOptions) {
 }
 
 async function parseResponse(response: Response) {
+  if (
+    response.status === 204 ||
+    response.status === 205 ||
+    response.status === 304 ||
+    response.headers.get("content-length") === "0"
+  ) {
+    return null;
+  }
+
   const contentType = response.headers.get("content-type") || "";
 
   if (contentType.includes("application/json")) {
-    return (await response.json()) as unknown;
+    const text = await response.text();
+
+    if (!text.trim()) {
+      return null;
+    }
+
+    return JSON.parse(text) as unknown;
   }
 
   if (contentType.startsWith("text/")) {
