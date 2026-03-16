@@ -2,6 +2,7 @@
 
 import {
   Activity,
+  BookUser,
   ChevronRight,
   Layers3,
   Lock,
@@ -46,6 +47,8 @@ import {
 import { publicEnv } from "@/lib/env";
 import {
   TENANT_AUDIT_LOGS_READ_PERMISSION,
+  TENANT_CONTACTS_MANAGE_PERMISSION,
+  TENANT_CONTACTS_READ_PERMISSION,
   TENANT_MEMBERS_READ_PERMISSION,
   TENANT_MESSAGES_READ_PERMISSION,
   TENANT_METRICS_READ_PERMISSION,
@@ -67,6 +70,13 @@ const navigationItems = [
     title: "Times",
     href: "/app/teams",
     icon: UsersRound,
+    status: "ativo",
+    match: "prefix",
+  },
+  {
+    title: "Contatos",
+    href: "/app/contacts",
+    icon: BookUser,
     status: "ativo",
     match: "prefix",
   },
@@ -109,6 +119,12 @@ const pageContentMap = {
     eyebrow: "Times",
     title: "Gestão de times",
     description: "Crie times, acompanhe membros e administre invites ativos.",
+  },
+  "/app/contacts": {
+    eyebrow: "Contatos",
+    title: "Base de contatos do workspace",
+    description:
+      "Construa a audiência que vai sustentar conversas, inbox, automações e futuras ações de CRM.",
   },
   "/app/messaging": {
     eyebrow: "Mensageria",
@@ -219,6 +235,13 @@ function SidebarContent({
         hasTenantPermission(TENANT_MESSAGES_READ_PERMISSION) ||
         hasTenantPermission(TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION) ||
         hasTenantPermission(TENANT_WHATSAPP_SENDERS_READ_PERMISSION)
+      );
+    }
+
+    if (item.title === "Contatos") {
+      return !(
+        hasTenantPermission(TENANT_CONTACTS_READ_PERMISSION) ||
+        hasTenantPermission(TENANT_CONTACTS_MANAGE_PERMISSION)
       );
     }
 

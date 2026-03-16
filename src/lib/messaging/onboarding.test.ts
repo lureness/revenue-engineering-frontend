@@ -12,6 +12,7 @@ describe("shouldRedirectToProviderSetup", () => {
   it("não redireciona a área de mensageria nem conta do usuário", () => {
     expect(shouldRedirectToProviderSetup("/app/messaging")).toBe(false);
     expect(shouldRedirectToProviderSetup("/app/messaging/senders")).toBe(false);
+    expect(shouldRedirectToProviderSetup("/app/contacts")).toBe(false);
     expect(shouldRedirectToProviderSetup("/app/user")).toBe(false);
   });
 

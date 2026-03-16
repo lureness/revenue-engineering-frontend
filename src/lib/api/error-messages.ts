@@ -108,6 +108,12 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   "missing permission: tenant.messages.read": {
     title: "Você não pode visualizar o histórico de mensagens deste workspace.",
   },
+  "missing permission: tenant.contacts.read": {
+    title: "Você não pode visualizar os contatos deste workspace.",
+  },
+  "missing permission: tenant.contacts.manage": {
+    title: "Você não pode gerenciar os contatos deste workspace.",
+  },
   "missing permission: tenant.audit_logs.read": {
     title: "Você não pode visualizar os logs deste workspace.",
   },
@@ -137,6 +143,15 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   },
   "message not found": {
     title: "A mensagem informada não foi encontrada.",
+  },
+  "contact not found": {
+    title: "O contato informado não foi encontrado.",
+  },
+  "contact already exists for this workspace": {
+    title: "Já existe um contato neste workspace com esse e-mail ou telefone.",
+  },
+  "contact must include email or phone_number": {
+    title: "Informe pelo menos um e-mail ou telefone para o contato.",
   },
   "invalid current password": {
     title: "A senha atual informada está incorreta.",

@@ -7,6 +7,10 @@ export function shouldRedirectToProviderSetup(pathname: string) {
     return false;
   }
 
+  if (pathname.startsWith("/app/contacts")) {
+    return false;
+  }
+
   if (pathname === "/app/user") {
     return false;
   }
