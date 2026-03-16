@@ -4,6 +4,7 @@ import {
   Activity,
   ChevronRight,
   Layers3,
+  Lock,
   LogOut,
   Menu,
   MessageCircleMore,
@@ -17,6 +18,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { type ReactNode, useState } from "react";
 
+import { useAccess } from "@/components/access/access-provider";
 import { LurenessMark } from "@/components/brand/lureness-mark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -42,6 +44,12 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { publicEnv } from "@/lib/env";
+import {
+  TENANT_MEMBERS_READ_PERMISSION,
+  TENANT_MESSAGES_READ_PERMISSION,
+  TENANT_METRICS_READ_PERMISSION,
+  TENANT_PERMISSIONS_MANAGE_PERMISSION,
+} from "@/lib/rbac/permissions";
 import { cn } from "@/lib/utils";
 
 const navigationItems = [
@@ -173,6 +181,34 @@ function SidebarContent({
   signOutPending = false,
 }: SidebarContentProps) {
   const pathname = usePathname();
+  const { hasTenantPermission, status: accessStatus } = useAccess();
+
+  function isNavigationItemLocked(item: (typeof navigationItems)[number]) {
+    if (accessStatus !== "ready") {
+      return false;
+    }
+
+    if (item.href === "/app") {
+      return !hasTenantPermission(TENANT_METRICS_READ_PERMISSION);
+    }
+
+    if (item.href === "/app/rbac") {
+      return !(
+        hasTenantPermission(TENANT_MEMBERS_READ_PERMISSION) ||
+        hasTenantPermission(TENANT_PERMISSIONS_MANAGE_PERMISSION)
+      );
+    }
+
+    if (item.title === "Mensageria") {
+      return !hasTenantPermission(TENANT_MESSAGES_READ_PERMISSION);
+    }
+
+    if (item.title === "Observabilidade") {
+      return !hasTenantPermission(TENANT_METRICS_READ_PERMISSION);
+    }
+
+    return false;
+  }
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -226,6 +262,7 @@ function SidebarContent({
           const Icon = item.icon;
           const isNavigable = item.href.startsWith("/");
           const isActive = isNavigationItemActive(pathname, item);
+          const isLocked = isNavigationItemLocked(item);
           const itemClassName = cn(
             "flex rounded-2xl border transition-colors",
             collapsed
@@ -238,14 +275,32 @@ function SidebarContent({
           const iconNode = <Icon className="size-4 shrink-0" />;
 
           if (collapsed) {
+            const collapsedIcon = (
+              <span className="relative inline-flex items-center justify-center">
+                {iconNode}
+                {isLocked ? (
+                  <span
+                    className={cn(
+                      "absolute -right-1 -bottom-1 inline-flex size-4 items-center justify-center rounded-full border",
+                      isActive
+                        ? "border-foreground/20 bg-background text-foreground"
+                        : "border-border/70 bg-background text-muted-foreground",
+                    )}
+                  >
+                    <Lock className="size-2.5" />
+                  </span>
+                ) : null}
+              </span>
+            );
+
             if (!isNavigable) {
               return (
                 <div
                   key={item.title}
                   className={itemClassName}
-                  title={item.title}
+                  title={isLocked ? `${item.title} · restrito` : item.title}
                 >
-                  {iconNode}
+                  {collapsedIcon}
                 </div>
               );
             }
@@ -255,10 +310,10 @@ function SidebarContent({
                 key={item.title}
                 href={item.href}
                 className={itemClassName}
-                title={item.title}
+                title={isLocked ? `${item.title} · restrito` : item.title}
                 aria-label={item.title}
               >
-                {iconNode}
+                {collapsedIcon}
               </Link>
             );
           }
@@ -267,7 +322,19 @@ function SidebarContent({
             <>
               <span className="flex items-center gap-3">
                 {iconNode}
-                <span className="text-sm font-medium">{item.title}</span>
+                <span className="flex items-center gap-2">
+                  <span className="text-sm font-medium">{item.title}</span>
+                  {isLocked ? (
+                    <Lock
+                      className={cn(
+                        "size-3.5",
+                        isActive
+                          ? "text-background/80"
+                          : "text-muted-foreground",
+                      )}
+                    />
+                  ) : null}
+                </span>
               </span>
               {isActive ? (
                 <span className="pointer-events-none">
