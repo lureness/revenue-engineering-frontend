@@ -10,11 +10,15 @@ import { cn } from "@/lib/utils";
 
 type ThemeToggleProps = {
   className?: string;
+  orientation?: "horizontal" | "vertical";
 };
 
 const THEME_TRANSITION_CLASS = "theme-changing";
 
-export function ThemeToggle({ className }: ThemeToggleProps) {
+export function ThemeToggle({
+  className,
+  orientation = "horizontal",
+}: ThemeToggleProps) {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const timeoutRef = useRef<number | null>(null);
@@ -30,6 +34,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   }, []);
 
   const isDark = mounted && resolvedTheme === "dark";
+  const isVertical = orientation === "vertical";
 
   function handleToggleTheme() {
     if (typeof document !== "undefined") {
@@ -54,14 +59,22 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       whileTap={{ scale: 0.96 }}
       className={cn(
         buttonVariants({ variant: "outline", size: "default" }),
-        "relative h-10 w-[4.8rem] rounded-full border-border/70 bg-card/85 px-1 shadow-sm hover:bg-muted",
+        "relative rounded-full border-border/70 bg-card/85 px-1 shadow-sm hover:bg-muted",
+        isVertical ? "h-[4.8rem] w-10 py-1" : "h-10 w-[4.8rem]",
         className,
       )}
       aria-label={isDark ? "Ativar tema claro" : "Ativar tema escuro"}
       title={isDark ? "Ativar tema claro" : "Ativar tema escuro"}
       onClick={handleToggleTheme}
     >
-      <span className="pointer-events-none absolute inset-0 flex items-center justify-between px-2 text-muted-foreground/80">
+      <span
+        className={cn(
+          "pointer-events-none absolute inset-0 text-muted-foreground/80",
+          isVertical
+            ? "flex flex-col items-center justify-between py-2"
+            : "flex items-center justify-between px-2",
+        )}
+      >
         <SunMedium
           className={cn(
             "size-4 transition-opacity duration-300",
@@ -81,7 +94,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         className={cn(
           "absolute top-1 left-1 flex size-8 items-center justify-center rounded-full bg-foreground text-background shadow-sm",
         )}
-        animate={{ x: isDark ? 36 : 0, rotate: isDark ? 180 : 0 }}
+        animate={isVertical ? { y: isDark ? 36 : 0 } : { x: isDark ? 36 : 0 }}
         transition={{
           type: "spring",
           stiffness: 420,
@@ -91,10 +104,10 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
         <AnimatePresence mode="wait" initial={false}>
           <motion.span
             key={isDark ? "moon" : "sun"}
-            initial={{ opacity: 0, rotate: -90, scale: 0.8 }}
+            initial={{ opacity: 0, rotate: isDark ? 24 : -24, scale: 0.8 }}
             animate={{ opacity: 1, rotate: 0, scale: 1 }}
-            exit={{ opacity: 0, rotate: 90, scale: 0.8 }}
-            transition={{ duration: 0.2 }}
+            exit={{ opacity: 0, rotate: isDark ? -24 : 24, scale: 0.8 }}
+            transition={{ duration: 0.22, ease: "easeOut" }}
             className="flex items-center justify-center"
           >
             {isDark ? (

@@ -14,7 +14,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { type ReactNode, useState } from "react";
 
 import { LurenessMark } from "@/components/brand/lureness-mark";
@@ -104,6 +104,12 @@ type SidebarContentProps = {
   collapsed?: boolean;
   mobile?: boolean;
   onCollapse?: () => void;
+  tenantName?: string;
+  userEmail?: string;
+  userRole?: string;
+  userInitials?: string;
+  onSignOut?: () => void | Promise<void>;
+  signOutPending?: boolean;
 };
 
 function getUserInitials(userEmail?: string) {
@@ -128,35 +134,40 @@ function SidebarContent({
   collapsed = false,
   mobile = false,
   onCollapse,
+  tenantName,
+  userEmail,
+  userRole,
+  userInitials = "U",
+  onSignOut,
+  signOutPending = false,
 }: SidebarContentProps) {
   const pathname = usePathname();
 
   return (
     <div className="flex h-full flex-col gap-6">
-      <div
-        className={cn(
-          "flex items-center gap-3",
-          collapsed ? "justify-center" : undefined,
-        )}
-      >
-        <LurenessMark
-          compact={collapsed}
-          subtitle={mobile ? "Mobile Workspace" : "Application Workspace"}
-        />
-        {!collapsed && onCollapse ? (
-          <div className="flex justify-center">
-            <Button
-              variant="outline"
-              size="icon-sm"
-              onClick={onCollapse}
-              aria-label="Fechar sidebar"
-              title="Fechar sidebar"
-            >
-              <PanelLeftClose className="size-4" />
-            </Button>
-          </div>
-        ) : null}
-      </div>
+      {mobile ? null : (
+        <div
+          className={cn(
+            "flex items-center gap-3",
+            collapsed ? "justify-center" : undefined,
+          )}
+        >
+          <LurenessMark compact={collapsed} subtitle="Application Workspace" />
+          {!collapsed && onCollapse ? (
+            <div className="flex justify-center">
+              <Button
+                variant="outline"
+                size="icon-sm"
+                onClick={onCollapse}
+                aria-label="Fechar sidebar"
+                title="Fechar sidebar"
+              >
+                <PanelLeftClose className="size-4" />
+              </Button>
+            </div>
+          ) : null}
+        </div>
+      )}
 
       {collapsed ? null : (
         <Card size="sm" className="bg-card/85 shadow-sm">
@@ -254,7 +265,64 @@ function SidebarContent({
       </nav>
 
       {collapsed ? (
-        <div className="mt-auto flex justify-center">
+        <div className="mt-auto grid justify-center gap-3">
+          <ThemeToggle orientation="vertical" />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="outline"
+                  className="size-12 rounded-2xl p-0"
+                  aria-label="Abrir menu da conta"
+                  title="Abrir menu da conta"
+                />
+              }
+            >
+              <Avatar size="sm" className="pointer-events-none after:hidden">
+                <AvatarFallback className="bg-foreground text-xs font-medium text-background">
+                  {userInitials}
+                </AvatarFallback>
+              </Avatar>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side="right"
+              align="center"
+              className="w-56 min-w-56"
+            >
+              <DropdownMenuGroup>
+                <DropdownMenuLabel>
+                  <div className="grid gap-0.5 px-1 py-1">
+                    <p className="truncate text-sm font-medium text-foreground">
+                      {userEmail ?? "Conta autenticada"}
+                    </p>
+                    <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                      {userRole ?? "member"}
+                    </p>
+                  </div>
+                </DropdownMenuLabel>
+              </DropdownMenuGroup>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem render={<Link href="/app/user" />}>
+                <Settings className="size-4" />
+                Minha conta
+              </DropdownMenuItem>
+              {onSignOut ? (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    variant="destructive"
+                    disabled={signOutPending}
+                    onClick={() => {
+                      void onSignOut();
+                    }}
+                  >
+                    <LogOut className="size-4" />
+                    {signOutPending ? "Saindo..." : "Sair"}
+                  </DropdownMenuItem>
+                </>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Link
             href="/"
             className="inline-flex size-12 items-center justify-center rounded-2xl border border-border/70 bg-card/85 text-foreground shadow-sm transition-colors hover:text-primary"
@@ -265,24 +333,72 @@ function SidebarContent({
           </Link>
         </div>
       ) : (
-        <Card size="sm" className="mt-auto bg-card/85 shadow-sm">
-          <CardContent className="grid gap-4 pt-3">
-            <div className="space-y-2">
-              <Badge variant="secondary">Estrutura</Badge>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Shell, proxy interno e sessão segura já estão prontos para
-                receber auth, dashboard e workflows do produto.
-              </p>
-            </div>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary"
-            >
-              Voltar para a landing
-              <ChevronRight className="size-4" />
-            </Link>
-          </CardContent>
-        </Card>
+        <div className="mt-auto grid gap-4">
+          <div className="flex items-center">
+            <ThemeToggle />
+          </div>
+
+          <Card size="sm" className="bg-card/85 shadow-sm">
+            <CardContent className="grid gap-4 pt-3">
+              <div className="flex items-center gap-3">
+                <Avatar size="lg" className="after:hidden">
+                  <AvatarFallback className="bg-foreground text-sm font-medium text-background">
+                    {userInitials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">
+                    {userEmail ?? "Conta autenticada"}
+                  </p>
+                  <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                    {userRole ?? "member"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="rounded-[1.2rem] border border-border/70 bg-background/85 px-4 py-3">
+                <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                  Tenant ativo
+                </p>
+                <p className="mt-1 text-sm font-medium text-foreground">
+                  {tenantName ?? "Workspace atual"}
+                </p>
+              </div>
+
+              <div className="grid gap-2">
+                <Button
+                  variant="outline"
+                  nativeButton={false}
+                  render={<Link href="/app/user" />}
+                >
+                  <Settings className="size-4" />
+                  Minha conta
+                </Button>
+                {onSignOut ? (
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    disabled={signOutPending}
+                    onClick={() => {
+                      void onSignOut();
+                    }}
+                  >
+                    <LogOut className="size-4" />
+                    {signOutPending ? "Saindo..." : "Sair"}
+                  </Button>
+                ) : null}
+              </div>
+
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 text-sm font-medium text-foreground transition-colors hover:text-primary"
+              >
+                Voltar para a landing
+                <ChevronRight className="size-4" />
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );
@@ -297,7 +413,6 @@ export function AppShell({
   signOutPending = false,
 }: AppShellProps) {
   const pathname = usePathname();
-  const router = useRouter();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const pageContent =
@@ -307,37 +422,43 @@ export function AppShell({
 
   return (
     <div className="page-frame min-h-screen">
-      <div
-        className={cn(
-          "grid min-h-screen transition-[grid-template-columns] duration-300 ease-out",
-          isSidebarCollapsed
-            ? "lg:grid-cols-[96px_1fr]"
-            : "lg:grid-cols-[288px_1fr]",
-        )}
-      >
+      <div className={cn("relative min-h-screen")}>
         <aside
           className={cn(
-            "surface-panel-strong hidden border-b border-border/70 p-5 lg:sticky lg:top-0 lg:flex lg:h-screen lg:flex-col lg:rounded-none lg:border-r lg:border-b-0 lg:p-6",
-            isSidebarCollapsed ? "lg:px-4" : undefined,
+            "surface-panel-strong hidden border-b border-border/70 p-5 lg:fixed lg:top-4 lg:bottom-4 lg:left-4 lg:z-20 lg:flex lg:flex-col lg:overflow-y-auto lg:rounded-[2rem] lg:border lg:shadow-lg",
+            isSidebarCollapsed ? "lg:w-24 lg:px-4 lg:py-6" : "lg:w-72 lg:p-6",
           )}
         >
           <SidebarContent
             collapsed={isSidebarCollapsed}
             onCollapse={() => setIsSidebarCollapsed(true)}
+            tenantName={tenantName}
+            userEmail={userEmail}
+            userRole={userRole}
+            userInitials={userInitials}
+            onSignOut={onSignOut}
+            signOutPending={signOutPending}
           />
         </aside>
 
-        <div className="relative flex min-h-screen flex-col">
+        <div
+          className={cn(
+            "relative flex min-h-screen flex-col transition-[padding-left] duration-300 ease-out",
+            isSidebarCollapsed ? "lg:pl-32" : "lg:pl-80",
+          )}
+        >
           <div className="pointer-events-none absolute inset-0 bg-lureness-glow-dark opacity-80" />
           <div className="pointer-events-none absolute inset-0 grid-fade opacity-15" />
-          <header className="relative z-10 flex flex-col gap-3 border-b border-border/70 bg-background/80 px-6 py-5 backdrop-blur md:flex-row md:items-end md:justify-between lg:px-10">
+          <header className="relative z-10 flex flex-col gap-3 border-b border-border/70 bg-background/80 px-6 py-5 backdrop-blur md:flex-row md:items-end md:justify-between lg:mx-4 lg:mt-4 lg:rounded-[2rem] lg:border lg:bg-background/85 lg:px-8 lg:py-6 lg:shadow-sm">
             <div
               className={cn(
-                "flex",
-                isSidebarCollapsed ? "items-center gap-5" : "items-start gap-3",
+                "flex w-full items-start justify-between gap-4 lg:w-auto lg:justify-start",
+                isSidebarCollapsed
+                  ? "lg:items-center lg:gap-5"
+                  : "lg:items-start lg:gap-3",
               )}
             >
-              <div className="lg:hidden">
+              <div className="order-2 lg:hidden">
                 <Sheet
                   open={isMobileSidebarOpen}
                   onOpenChange={setIsMobileSidebarOpen}
@@ -376,7 +497,15 @@ export function AppShell({
                       </div>
                     </SheetHeader>
                     <SheetBody className="thin-scrollbar p-4">
-                      <SidebarContent mobile />
+                      <SidebarContent
+                        mobile
+                        tenantName={tenantName}
+                        userEmail={userEmail}
+                        userRole={userRole}
+                        userInitials={userInitials}
+                        onSignOut={onSignOut}
+                        signOutPending={signOutPending}
+                      />
                     </SheetBody>
                   </SheetContent>
                 </Sheet>
@@ -394,7 +523,7 @@ export function AppShell({
                   </Button>
                 </div>
               ) : null}
-              <div className="space-y-1">
+              <div className="order-1 space-y-1">
                 <p className="eyebrow">{pageContent.eyebrow}</p>
                 <h1 className="font-serif text-3xl tracking-tight text-foreground">
                   {pageContent.title}
@@ -404,73 +533,9 @@ export function AppShell({
                 </p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-3 self-start">
-              <ThemeToggle />
-              {tenantName ? (
-                <Badge variant="outline" className="gap-2 px-3 py-2 text-sm">
-                  <span className="inline-flex size-2.5 rounded-full bg-chart-2" />
-                  {tenantName}
-                </Badge>
-              ) : null}
-              <DropdownMenu>
-                <DropdownMenuTrigger
-                  render={
-                    <Button
-                      variant="outline"
-                      className="size-11 rounded-full p-0"
-                      aria-label="Abrir menu do usuário"
-                      title="Abrir menu do usuário"
-                    />
-                  }
-                >
-                  <Avatar
-                    size="lg"
-                    className="pointer-events-none after:hidden"
-                  >
-                    <AvatarFallback className="bg-foreground text-sm font-medium text-background">
-                      {userInitials}
-                    </AvatarFallback>
-                  </Avatar>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-72 min-w-72">
-                  <DropdownMenuGroup>
-                    <DropdownMenuLabel>
-                      <div className="grid gap-0.5 px-1 py-1">
-                        <p className="text-sm font-medium text-foreground">
-                          {userEmail ?? "Conta autenticada"}
-                        </p>
-                        <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                          {userRole ?? "member"}
-                        </p>
-                      </div>
-                    </DropdownMenuLabel>
-                  </DropdownMenuGroup>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => router.push("/app/user")}>
-                    <Settings className="size-4" />
-                    Minha conta
-                  </DropdownMenuItem>
-                  {onSignOut ? (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        disabled={signOutPending}
-                        onClick={() => {
-                          void onSignOut();
-                        }}
-                      >
-                        <LogOut className="size-4" />
-                        {signOutPending ? "Saindo..." : "Sair"}
-                      </DropdownMenuItem>
-                    </>
-                  ) : null}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
           </header>
 
-          <main className="relative z-10 flex-1 px-6 py-8 lg:px-10 lg:py-10">
+          <main className="relative z-10 flex-1 px-6 py-8 lg:px-4 lg:py-8">
             {children}
           </main>
         </div>

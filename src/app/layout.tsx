@@ -29,6 +29,11 @@ export const metadata: Metadata = {
   },
   description:
     "SaaS para operação com WhatsApp, times, governança e observabilidade em uma única superfície.",
+  icons: {
+    icon: "/img/favicon.png",
+    shortcut: "/img/favicon.png",
+    apple: "/img/favicon.png",
+  },
 };
 
 export default function RootLayout({
