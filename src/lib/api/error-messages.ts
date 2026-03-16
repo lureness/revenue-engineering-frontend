@@ -72,6 +72,27 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   "team member not found": {
     title: "O membro informado não foi encontrado.",
   },
+  "tenant user not found": {
+    title: "O usuário informado não foi encontrado neste workspace.",
+  },
+  "tenant permission already granted": {
+    title: "Essa permissão já foi concedida para esse usuário.",
+  },
+  "tenant permission grant not found": {
+    title: "Essa permissão direta já não estava atribuída.",
+  },
+  "tenant must have at least one owner": {
+    title: "O workspace precisa manter pelo menos um owner.",
+  },
+  "missing permission: tenant.members.read": {
+    title: "Você não pode visualizar os usuários deste workspace.",
+  },
+  "missing permission: tenant.members.manage": {
+    title: "Você não pode alterar a role dos usuários deste workspace.",
+  },
+  "missing permission: tenant.permissions.manage": {
+    title: "Você não pode gerenciar permissões neste workspace.",
+  },
   "invalid current password": {
     title: "A senha atual informada está incorreta.",
   },

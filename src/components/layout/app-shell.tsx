@@ -75,9 +75,9 @@ const navigationItems = [
   },
   {
     title: "RBAC",
-    href: "#",
+    href: "/app/rbac",
     icon: ShieldCheck,
-    status: "próximo",
+    status: "ativo",
     match: "exact",
   },
 ] as const;
@@ -98,6 +98,12 @@ const pageContentMap = {
     eyebrow: "Times",
     title: "Gestão de times",
     description: "Crie times, acompanhe membros e administre invites ativos.",
+  },
+  "/app/rbac": {
+    eyebrow: "RBAC",
+    title: "Governança de acesso",
+    description:
+      "Administre roles globais, grants diretos e permissões efetivas do workspace.",
   },
 } as const;
 
