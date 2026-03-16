@@ -46,7 +46,7 @@ import { cn } from "@/lib/utils";
 
 const navigationItems = [
   {
-    title: "Workspace",
+    title: "Dashboard",
     href: "/app",
     icon: Layers3,
     status: "ativo",
@@ -79,10 +79,10 @@ const navigationItems = [
 
 const pageContentMap = {
   "/app": {
-    eyebrow: "Workspace",
-    title: "Fundação do aplicativo",
+    eyebrow: "Dashboard",
+    title: "Observabilidade do workspace",
     description:
-      "A área autenticada já tem carcaça, navegação e integração base para os próximos módulos.",
+      "Acompanhe tráfego, saúde operacional e sinais do produto a partir das métricas da API.",
   },
   "/app/user": {
     eyebrow: "Usuário",
