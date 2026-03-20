@@ -114,6 +114,16 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   "missing permission: tenant.contacts.manage": {
     title: "Você não pode gerenciar os contatos deste workspace.",
   },
+  "missing permission: tenant.conversations.read": {
+    title: "Você não pode visualizar as conversas deste workspace.",
+  },
+  "missing permission: tenant.conversations.manage": {
+    title: "Você não pode operar as conversas deste workspace.",
+  },
+  "missing permission: tenant.composer.send": {
+    title:
+      "Você não pode enviar mensagens a partir das conversas deste workspace.",
+  },
   "missing permission: tenant.audit_logs.read": {
     title: "Você não pode visualizar os logs deste workspace.",
   },
@@ -152,6 +162,38 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   },
   "contact must include email or phone_number": {
     title: "Informe pelo menos um e-mail ou telefone para o contato.",
+  },
+  "conversation not found": {
+    title: "A conversa informada não foi encontrada.",
+  },
+  "conversation not found for tenant": {
+    title: "A conversa informada não foi encontrada neste workspace.",
+  },
+  "assigned user not found in tenant": {
+    title: "O usuário escolhido não pertence a este workspace.",
+  },
+  "assigned team not found in tenant": {
+    title: "O time escolhido não pertence a este workspace.",
+  },
+  "message body is required": {
+    title: "Escreva a mensagem antes de enviar.",
+  },
+  "contact does not have an email address": {
+    title: "Esse contato não tem e-mail configurado.",
+  },
+  "contact does not have a phone number": {
+    title: "Esse contato não tem telefone configurado.",
+  },
+  "unsupported conversation channel": {
+    title: "Esse canal ainda não é compatível com o composer.",
+  },
+  "message log entry was not created": {
+    title:
+      "A mensagem foi enviada, mas o histórico não foi registrado corretamente.",
+  },
+  "message log entry was not found after sending": {
+    title:
+      "A mensagem foi enviada, mas não conseguimos localizar o registro dela no histórico.",
   },
   "invalid current password": {
     title: "A senha atual informada está incorreta.",

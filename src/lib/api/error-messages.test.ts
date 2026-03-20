@@ -113,4 +113,20 @@ describe("formatApiErrorMessage", () => {
         "Peça um novo invite para entrar no time com um link válido.",
     });
   });
+
+  it("traduz erros conhecidos de conversa e composer", () => {
+    const error = new ApiClientError({
+      status: 403,
+      message: "missing permission: tenant.composer.send",
+      requestId: "req_904",
+      detail: {
+        detail: "missing permission: tenant.composer.send",
+      },
+    });
+
+    expect(formatApiErrorMessage(error)).toEqual({
+      title:
+        "Você não pode enviar mensagens a partir das conversas deste workspace.",
+    });
+  });
 });

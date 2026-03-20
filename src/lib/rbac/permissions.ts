@@ -7,8 +7,13 @@ export const TENANT_PERMISSIONS_MANAGE_PERMISSION = "tenant.permissions.manage";
 export const TENANT_MESSAGES_READ_PERMISSION = "tenant.messages.read";
 export const TENANT_CONTACTS_READ_PERMISSION = "tenant.contacts.read";
 export const TENANT_CONTACTS_MANAGE_PERMISSION = "tenant.contacts.manage";
+export const TENANT_CONVERSATIONS_READ_PERMISSION = "tenant.conversations.read";
+export const TENANT_CONVERSATIONS_MANAGE_PERMISSION =
+  "tenant.conversations.manage";
+export const TENANT_COMPOSER_SEND_PERMISSION = "tenant.composer.send";
 export const TENANT_AUDIT_LOGS_READ_PERMISSION = "tenant.audit_logs.read";
 export const TENANT_METRICS_READ_PERMISSION = "tenant.metrics.read";
+export const TENANT_TEAMS_READ_PERMISSION = "tenant.teams.read";
 export const TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION =
   "tenant.provider_accounts.read";
 export const TENANT_PROVIDER_ACCOUNTS_MANAGE_PERMISSION =

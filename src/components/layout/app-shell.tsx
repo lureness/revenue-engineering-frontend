@@ -4,6 +4,7 @@ import {
   Activity,
   BookUser,
   ChevronRight,
+  Inbox,
   Layers3,
   Lock,
   LogOut,
@@ -49,6 +50,7 @@ import {
   TENANT_AUDIT_LOGS_READ_PERMISSION,
   TENANT_CONTACTS_MANAGE_PERMISSION,
   TENANT_CONTACTS_READ_PERMISSION,
+  TENANT_CONVERSATIONS_READ_PERMISSION,
   TENANT_MEMBERS_READ_PERMISSION,
   TENANT_MESSAGES_READ_PERMISSION,
   TENANT_METRICS_READ_PERMISSION,
@@ -65,6 +67,13 @@ const navigationItems = [
     icon: Layers3,
     status: "ativo",
     match: "exact",
+  },
+  {
+    title: "Inbox",
+    href: "/app/inbox",
+    icon: Inbox,
+    status: "ativo",
+    match: "prefix",
   },
   {
     title: "Times",
@@ -125,6 +134,12 @@ const pageContentMap = {
     title: "Base de contatos do workspace",
     description:
       "Construa a audiência que vai sustentar conversas, inbox, automações e futuras ações de CRM.",
+  },
+  "/app/inbox": {
+    eyebrow: "Inbox",
+    title: "Operação de conversas",
+    description:
+      "Centralize o histórico por contato, distribua a operação e responda no canal certo.",
   },
   "/app/messaging": {
     eyebrow: "Mensageria",
@@ -245,6 +260,10 @@ function SidebarContent({
       );
     }
 
+    if (item.title === "Inbox") {
+      return !hasTenantPermission(TENANT_CONVERSATIONS_READ_PERMISSION);
+    }
+
     if (item.title === "Observabilidade") {
       return !(
         hasTenantPermission(TENANT_METRICS_READ_PERMISSION) ||
@@ -290,7 +309,7 @@ function SidebarContent({
                 Frontend pronto para integração
               </p>
               <p className="text-sm leading-6 text-muted-foreground">
-                Base de API configurada para os próximos slices:
+                Base de API configurada para os próximos domínios:
               </p>
             </div>
             <code className="overflow-hidden text-ellipsis whitespace-nowrap rounded-xl bg-foreground/5 px-3 py-2 font-mono text-[0.72rem] text-foreground">
