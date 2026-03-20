@@ -3,6 +3,7 @@
 import {
   BookUser,
   CheckCheck,
+  Command,
   Inbox,
   Loader2,
   Lock,
@@ -11,9 +12,11 @@ import {
   RefreshCcw,
   Search,
   SendHorizontal,
+  SlidersHorizontal,
   UsersRound,
+  X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useAccess } from "@/components/access/access-provider";
 import { Badge } from "@/components/ui/badge";
@@ -39,10 +42,19 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { formatApiErrorMessage } from "@/lib/api/error-messages";
+import { getContacts } from "@/lib/contacts/api";
+import type { ContactItem } from "@/lib/contacts/types";
 import {
   assignInboxConversation,
   closeInboxConversation,
@@ -68,6 +80,8 @@ import { formatDateTime } from "@/lib/observability/format";
 import { getTenantUsers } from "@/lib/rbac/api";
 import {
   TENANT_COMPOSER_SEND_PERMISSION,
+  TENANT_CONTACTS_MANAGE_PERMISSION,
+  TENANT_CONTACTS_READ_PERMISSION,
   TENANT_CONVERSATIONS_MANAGE_PERMISSION,
   TENANT_CONVERSATIONS_READ_PERMISSION,
   TENANT_MEMBERS_READ_PERMISSION,
@@ -99,6 +113,17 @@ type SelectFieldProps = {
   placeholder?: string;
   disabled?: boolean;
   description?: string;
+};
+
+type ActiveFilterChip = {
+  key:
+    | "status"
+    | "channel"
+    | "has_unread"
+    | "assigned_user_id"
+    | "assigned_team_id"
+    | "contact_id";
+  label: string;
 };
 
 function SelectField({
@@ -171,8 +196,25 @@ function getAssignedTeamLabel(
   return assignedTeam?.name ?? "Time atribuído";
 }
 
+function getFilterOptionLabel(
+  options: ReadonlyArray<{ label: string; value: string }>,
+  value: string,
+) {
+  return options.find((option) => option.value === value)?.label ?? value;
+}
+
+function getContactOptionLabel(contact: ContactItem) {
+  return (
+    contact.name ||
+    contact.email ||
+    contact.phone_number ||
+    "Contato sem identificação"
+  );
+}
+
 export function InboxWorkspace() {
   const { hasTenantPermission, status: accessStatus } = useAccess();
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [conversations, setConversations] = useState<
     InboxConversationListItem[]
@@ -184,11 +226,15 @@ export function InboxWorkspace() {
     useState<InboxConversationDetail | null>(null);
   const [tenantUsers, setTenantUsers] = useState<TenantUserItem[]>([]);
   const [teams, setTeams] = useState<TeamItem[]>([]);
+  const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [channelFilter, setChannelFilter] = useState("all");
   const [hasUnreadOnly, setHasUnreadOnly] = useState(false);
+  const [filterAssignedUserId, setFilterAssignedUserId] = useState("");
+  const [filterAssignedTeamId, setFilterAssignedTeamId] = useState("");
+  const [filterContactId, setFilterContactId] = useState("");
   const [assignmentUserId, setAssignmentUserId] = useState("");
   const [assignmentTeamId, setAssignmentTeamId] = useState("");
   const [messageSubject, setMessageSubject] = useState("");
@@ -213,6 +259,9 @@ export function InboxWorkspace() {
   const canSendComposer = hasTenantPermission(TENANT_COMPOSER_SEND_PERMISSION);
   const canReadMembers = hasTenantPermission(TENANT_MEMBERS_READ_PERMISSION);
   const canReadTeams = hasTenantPermission(TENANT_TEAMS_READ_PERMISSION);
+  const canReadContacts =
+    hasTenantPermission(TENANT_CONTACTS_READ_PERMISSION) ||
+    hasTenantPermission(TENANT_CONTACTS_MANAGE_PERMISSION);
 
   const totalUnread = useMemo(
     () =>
@@ -228,6 +277,95 @@ export function InboxWorkspace() {
         .length,
     [conversations],
   );
+  const userFilterOptions = useMemo(
+    () =>
+      tenantUsers.map((user) => ({
+        label: user.email,
+        value: user.id,
+      })),
+    [tenantUsers],
+  );
+  const teamFilterOptions = useMemo(
+    () =>
+      teams.map((team) => ({
+        label: team.name,
+        value: team.id,
+      })),
+    [teams],
+  );
+  const contactFilterOptions = useMemo(
+    () =>
+      contacts.map((contact) => ({
+        label: getContactOptionLabel(contact),
+        value: contact.id,
+      })),
+    [contacts],
+  );
+  const activeFilterChips = useMemo(() => {
+    const chips: ActiveFilterChip[] = [];
+
+    if (statusFilter !== "all") {
+      chips.push({
+        key: "status",
+        label: `Status: ${getFilterOptionLabel(STATUS_FILTER_OPTIONS, statusFilter)}`,
+      });
+    }
+
+    if (channelFilter !== "all") {
+      chips.push({
+        key: "channel",
+        label: `Canal: ${getFilterOptionLabel(CHANNEL_FILTER_OPTIONS, channelFilter)}`,
+      });
+    }
+
+    if (hasUnreadOnly) {
+      chips.push({
+        key: "has_unread",
+        label: "Somente não lidas",
+      });
+    }
+
+    if (filterAssignedUserId) {
+      chips.push({
+        key: "assigned_user_id",
+        label: `Responsável: ${getFilterOptionLabel(
+          userFilterOptions,
+          filterAssignedUserId,
+        )}`,
+      });
+    }
+
+    if (filterAssignedTeamId) {
+      chips.push({
+        key: "assigned_team_id",
+        label: `Time: ${getFilterOptionLabel(teamFilterOptions, filterAssignedTeamId)}`,
+      });
+    }
+
+    if (filterContactId) {
+      chips.push({
+        key: "contact_id",
+        label: `Contato: ${getFilterOptionLabel(contactFilterOptions, filterContactId)}`,
+      });
+    }
+
+    return chips;
+  }, [
+    channelFilter,
+    contactFilterOptions,
+    filterAssignedTeamId,
+    filterAssignedUserId,
+    filterContactId,
+    hasUnreadOnly,
+    statusFilter,
+    teamFilterOptions,
+    userFilterOptions,
+  ]);
+  const hasActiveFilters =
+    Boolean(searchInput.trim()) ||
+    Boolean(searchQuery) ||
+    activeFilterChips.length > 0;
+  const hasActiveSearch = Boolean(searchInput.trim()) || Boolean(searchQuery);
 
   const loadConversations = useCallback(
     async (preferredConversationId?: string | null) => {
@@ -249,6 +387,9 @@ export function InboxWorkspace() {
           channel: channelFilter !== "all" ? channelFilter : undefined,
           has_unread: hasUnreadOnly ? true : undefined,
           q: searchQuery || undefined,
+          assigned_user_id: filterAssignedUserId || undefined,
+          assigned_team_id: filterAssignedTeamId || undefined,
+          contact_id: filterContactId || undefined,
           limit: 100,
         });
 
@@ -281,6 +422,9 @@ export function InboxWorkspace() {
     [
       canReadConversations,
       channelFilter,
+      filterAssignedTeamId,
+      filterAssignedUserId,
+      filterContactId,
       hasUnreadOnly,
       searchQuery,
       statusFilter,
@@ -352,10 +496,12 @@ export function InboxWorkspace() {
     let isActive = true;
 
     async function loadAssignmentOptions() {
-      const [tenantUsersResult, teamsResult] = await Promise.allSettled([
-        canReadMembers ? getTenantUsers() : Promise.resolve([]),
-        canReadTeams ? getTeams() : Promise.resolve([]),
-      ]);
+      const [tenantUsersResult, teamsResult, contactsResult] =
+        await Promise.allSettled([
+          canReadMembers ? getTenantUsers() : Promise.resolve([]),
+          canReadTeams ? getTeams() : Promise.resolve([]),
+          canReadContacts ? getContacts({ limit: 100 }) : Promise.resolve([]),
+        ]);
 
       if (!isActive) {
         return;
@@ -372,6 +518,12 @@ export function InboxWorkspace() {
       } else {
         setTeams([]);
       }
+
+      if (contactsResult.status === "fulfilled") {
+        setContacts(contactsResult.value);
+      } else {
+        setContacts([]);
+      }
     }
 
     void loadAssignmentOptions();
@@ -379,7 +531,38 @@ export function InboxWorkspace() {
     return () => {
       isActive = false;
     };
-  }, [accessStatus, canReadMembers, canReadTeams]);
+  }, [accessStatus, canReadContacts, canReadMembers, canReadTeams]);
+
+  useEffect(() => {
+    const handler = window.setTimeout(() => {
+      setSearchQuery(searchInput.trim());
+    }, 300);
+
+    return () => {
+      window.clearTimeout(handler);
+    };
+  }, [searchInput]);
+
+  useEffect(() => {
+    function handleSearchShortcut(event: KeyboardEvent) {
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        event.key.toLowerCase() !== "k"
+      ) {
+        return;
+      }
+
+      event.preventDefault();
+      searchInputRef.current?.focus();
+      searchInputRef.current?.select();
+    }
+
+    window.addEventListener("keydown", handleSearchShortcut);
+
+    return () => {
+      window.removeEventListener("keydown", handleSearchShortcut);
+    };
+  }, []);
 
   useEffect(() => {
     if (!selectedConversation) {
@@ -411,6 +594,37 @@ export function InboxWorkspace() {
     setStatusFilter("all");
     setChannelFilter("all");
     setHasUnreadOnly(false);
+    setFilterAssignedUserId("");
+    setFilterAssignedTeamId("");
+    setFilterContactId("");
+  }
+
+  function handleClearSearch() {
+    setSearchInput("");
+    setSearchQuery("");
+  }
+
+  function handleRemoveFilter(filterKey: ActiveFilterChip["key"]) {
+    switch (filterKey) {
+      case "status":
+        setStatusFilter("all");
+        break;
+      case "channel":
+        setChannelFilter("all");
+        break;
+      case "has_unread":
+        setHasUnreadOnly(false);
+        break;
+      case "assigned_user_id":
+        setFilterAssignedUserId("");
+        break;
+      case "assigned_team_id":
+        setFilterAssignedTeamId("");
+        break;
+      case "contact_id":
+        setFilterContactId("");
+        break;
+    }
   }
 
   async function handleMarkAsRead() {
@@ -654,75 +868,200 @@ export function InboxWorkspace() {
                 </CardDescription>
               </div>
               <Badge variant="outline">
-                {searchQuery ? `Busca: ${searchQuery}` : "Sem busca ativa"}
+                {getConversationCounterCopy(conversations.length)}
               </Badge>
             </div>
 
-            <form
-              className="grid gap-3 lg:grid-cols-[minmax(0,1.2fr)_repeat(3,minmax(0,0.55fr))_auto]"
-              onSubmit={handleSearchSubmit}
-            >
-              <Field>
-                <FieldLabel htmlFor="inbox-search">Busca</FieldLabel>
-                <FieldContent>
-                  <Input
-                    id="inbox-search"
-                    value={searchInput}
-                    onChange={(event) => setSearchInput(event.target.value)}
-                    placeholder="Nome, e-mail, telefone ou assunto"
-                  />
-                </FieldContent>
-              </Field>
-
-              <SelectField
-                label="Status"
-                value={statusFilter}
-                onChange={setStatusFilter}
-                options={STATUS_FILTER_OPTIONS.map((option) => ({
-                  label: option.label,
-                  value: option.value,
-                }))}
-              />
-
-              <SelectField
-                label="Canal"
-                value={channelFilter}
-                onChange={setChannelFilter}
-                options={CHANNEL_FILTER_OPTIONS.map((option) => ({
-                  label: option.label,
-                  value: option.value,
-                }))}
-              />
-
-              <Field>
-                <FieldLabel>Leitura</FieldLabel>
-                <FieldContent>
-                  <Button
-                    type="button"
-                    variant={hasUnreadOnly ? "default" : "outline"}
-                    className="h-11 w-full justify-center"
-                    onClick={() =>
-                      setHasUnreadOnly((currentValue) => !currentValue)
-                    }
-                  >
-                    <CheckCheck className="size-4" />
-                    {hasUnreadOnly ? "Só não lidas" : "Todas"}
-                  </Button>
-                </FieldContent>
-              </Field>
-
-              <div className="flex items-end gap-2">
-                <Button type="submit" variant="outline">
-                  <Search className="size-4" />
-                  Buscar
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={handleResetFilters}
+            <form className="grid gap-4" onSubmit={handleSearchSubmit}>
+              <div className="space-y-3">
+                <label
+                  htmlFor="inbox-search"
+                  className="text-sm font-medium text-foreground"
                 >
-                  Limpar
-                </Button>
+                  Buscar conversas
+                </label>
+                <div className="flex flex-col gap-3 md:flex-row md:items-center">
+                  <div className="relative flex-1">
+                    <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <div className="absolute top-1/2 right-3 flex -translate-y-1/2 items-center gap-2">
+                      {hasActiveSearch ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon-sm"
+                          onClick={handleClearSearch}
+                          aria-label="Limpar busca"
+                        >
+                          <X className="size-4" />
+                        </Button>
+                      ) : null}
+                      <kbd className="hidden rounded-[0.8rem] border border-border/70 bg-background px-2 py-1 text-[0.7rem] font-medium text-muted-foreground shadow-sm sm:inline-flex sm:items-center sm:gap-1">
+                        <Command className="size-3" />
+                        <span>K</span>
+                      </kbd>
+                    </div>
+                    <Input
+                      id="inbox-search"
+                      ref={searchInputRef}
+                      value={searchInput}
+                      onChange={(event) => setSearchInput(event.target.value)}
+                      placeholder="Nome, e-mail, telefone, assunto ou contexto da conversa"
+                      className="h-14 rounded-[1.4rem] border-border/70 bg-background pl-12 pr-28 text-base shadow-sm"
+                    />
+                  </div>
+
+                  <Popover>
+                    <PopoverTrigger
+                      render={
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-14 min-w-36 justify-between rounded-[1.3rem] border-border/70 bg-background px-4 shadow-sm md:self-stretch"
+                        />
+                      }
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <SlidersHorizontal className="size-4" />
+                        Filtros
+                      </span>
+                      {activeFilterChips.length > 0 ? (
+                        <Badge variant="secondary">
+                          {activeFilterChips.length}
+                        </Badge>
+                      ) : null}
+                    </PopoverTrigger>
+                    <PopoverContent
+                      align="end"
+                      sideOffset={8}
+                      className="w-[min(38rem,calc(100vw-2rem))] gap-4 rounded-[1.5rem] border border-border/70 bg-card/95 p-4 shadow-xl backdrop-blur"
+                    >
+                      <PopoverHeader className="gap-1">
+                        <PopoverTitle>Filtros do inbox</PopoverTitle>
+                        <p className="text-sm text-muted-foreground">
+                          Refine o inbox por status, canal, leitura e
+                          responsáveis.
+                        </p>
+                      </PopoverHeader>
+
+                      <div className="grid gap-3 md:grid-cols-2">
+                        <SelectField
+                          label="Status"
+                          value={statusFilter}
+                          onChange={setStatusFilter}
+                          options={STATUS_FILTER_OPTIONS.map((option) => ({
+                            label: option.label,
+                            value: option.value,
+                          }))}
+                        />
+
+                        <SelectField
+                          label="Canal"
+                          value={channelFilter}
+                          onChange={setChannelFilter}
+                          options={CHANNEL_FILTER_OPTIONS.map((option) => ({
+                            label: option.label,
+                            value: option.value,
+                          }))}
+                        />
+
+                        <Field>
+                          <FieldLabel>Leitura</FieldLabel>
+                          <FieldContent>
+                            <Button
+                              type="button"
+                              variant={hasUnreadOnly ? "default" : "outline"}
+                              className="h-11 w-full justify-center rounded-[1rem]"
+                              onClick={() =>
+                                setHasUnreadOnly(
+                                  (currentValue) => !currentValue,
+                                )
+                              }
+                            >
+                              <CheckCheck className="size-4" />
+                              {hasUnreadOnly ? "Somente não lidas" : "Todas"}
+                            </Button>
+                          </FieldContent>
+                        </Field>
+
+                        <SelectField
+                          label="Responsável"
+                          value={filterAssignedUserId}
+                          onChange={setFilterAssignedUserId}
+                          options={userFilterOptions}
+                          placeholder={
+                            canReadMembers
+                              ? "Todos os responsáveis"
+                              : "Sem acesso aos usuários"
+                          }
+                          disabled={!canReadMembers}
+                        />
+
+                        <SelectField
+                          label="Time"
+                          value={filterAssignedTeamId}
+                          onChange={setFilterAssignedTeamId}
+                          options={teamFilterOptions}
+                          placeholder={
+                            canReadTeams
+                              ? "Todos os times"
+                              : "Sem acesso aos times"
+                          }
+                          disabled={!canReadTeams}
+                        />
+
+                        <SelectField
+                          label="Contato"
+                          value={filterContactId}
+                          onChange={setFilterContactId}
+                          options={contactFilterOptions}
+                          placeholder={
+                            canReadContacts
+                              ? "Todos os contatos"
+                              : "Sem acesso aos contatos"
+                          }
+                          disabled={!canReadContacts}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-3">
+                        <p className="text-sm text-muted-foreground">
+                          {activeFilterChips.length > 0
+                            ? `${activeFilterChips.length} filtro(s) ativo(s)`
+                            : "Nenhum filtro secundário ativo."}
+                        </p>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={handleResetFilters}
+                          disabled={!hasActiveFilters}
+                        >
+                          Limpar tudo
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {activeFilterChips.length > 0 ? (
+                  activeFilterChips.map((chip) => (
+                    <button
+                      key={chip.key}
+                      type="button"
+                      onClick={() => handleRemoveFilter(chip.key)}
+                      className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-background px-3 py-1.5 text-sm text-foreground transition-colors hover:border-foreground/20 hover:text-primary"
+                    >
+                      <span>{chip.label}</span>
+                      <X className="size-3.5" />
+                    </button>
+                  ))
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhum filtro secundário ativo.
+                  </p>
+                )}
               </div>
             </form>
           </CardHeader>
@@ -746,10 +1085,7 @@ export function InboxWorkspace() {
                   </EmptyMedia>
                   <EmptyTitle>Nenhuma conversa encontrada</EmptyTitle>
                   <EmptyDescription>
-                    {searchQuery ||
-                    hasUnreadOnly ||
-                    statusFilter !== "all" ||
-                    channelFilter !== "all"
+                    {hasActiveFilters
                       ? "Ajuste os filtros para revisar outras conversas do inbox."
                       : "Assim que mensagens inbound forem associadas a contatos, elas começam a aparecer aqui."}
                   </EmptyDescription>
