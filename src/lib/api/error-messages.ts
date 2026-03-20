@@ -114,6 +114,12 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   "missing permission: tenant.contacts.manage": {
     title: "Você não pode gerenciar os contatos deste workspace.",
   },
+  "missing permission: tenant.surveys.read": {
+    title: "Você não pode visualizar os surveys deste workspace.",
+  },
+  "missing permission: tenant.surveys.manage": {
+    title: "Você não pode gerenciar os surveys deste workspace.",
+  },
   "missing permission: tenant.conversations.read": {
     title: "Você não pode visualizar as conversas deste workspace.",
   },
@@ -162,6 +168,39 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   },
   "contact must include email or phone_number": {
     title: "Informe pelo menos um e-mail ou telefone para o contato.",
+  },
+  "survey template already exists for this workspace": {
+    title: "O template IER já está instalado neste workspace.",
+  },
+  "survey template not found": {
+    title: "O survey informado não foi encontrado.",
+  },
+  "survey submission not found": {
+    title: "Não encontramos a sessão deste diagnóstico.",
+  },
+  "invalid survey access token": {
+    title: "O acesso a este diagnóstico expirou ou é inválido.",
+  },
+  "survey submission is already completed": {
+    title: "Este diagnóstico já foi concluído.",
+  },
+  "question does not belong to this survey": {
+    title: "A pergunta informada não pertence a este survey.",
+  },
+  "question option does not belong to this survey question": {
+    title: "A opção escolhida não pertence a esta pergunta.",
+  },
+  "survey template has no questions": {
+    title: "Este survey ainda não tem perguntas configuradas.",
+  },
+  "survey submission is not complete": {
+    title: "Responda todas as perguntas antes de gerar o diagnóstico.",
+  },
+  "survey result profile could not be resolved": {
+    title: "Não foi possível calcular o diagnóstico agora.",
+  },
+  "survey submission must be completed before unlocking the report": {
+    title: "Conclua o diagnóstico antes de desbloquear o relatório completo.",
   },
   "conversation not found": {
     title: "A conversa informada não foi encontrada.",

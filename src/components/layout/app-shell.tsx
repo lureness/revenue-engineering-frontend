@@ -4,6 +4,7 @@ import {
   Activity,
   BookUser,
   ChevronRight,
+  FileText,
   Inbox,
   Layers3,
   Lock,
@@ -56,6 +57,8 @@ import {
   TENANT_METRICS_READ_PERMISSION,
   TENANT_PERMISSIONS_MANAGE_PERMISSION,
   TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION,
+  TENANT_SURVEYS_MANAGE_PERMISSION,
+  TENANT_SURVEYS_READ_PERMISSION,
   TENANT_WHATSAPP_SENDERS_READ_PERMISSION,
 } from "@/lib/rbac/permissions";
 import { cn } from "@/lib/utils";
@@ -86,6 +89,13 @@ const navigationItems = [
     title: "Contatos",
     href: "/app/contacts",
     icon: BookUser,
+    status: "ativo",
+    match: "prefix",
+  },
+  {
+    title: "Surveys",
+    href: "/app/surveys",
+    icon: FileText,
     status: "ativo",
     match: "prefix",
   },
@@ -134,6 +144,12 @@ const pageContentMap = {
     title: "Base de contatos do workspace",
     description:
       "Construa a audiência que vai sustentar conversas, inbox, automações e futuras ações de CRM.",
+  },
+  "/app/surveys": {
+    eyebrow: "Surveys",
+    title: "Diagnósticos públicos e captação",
+    description:
+      "Instale templates, publique quizzes e transforme tráfego em lead qualificado com contexto para o inbox.",
   },
   "/app/inbox": {
     eyebrow: "Inbox",
@@ -257,6 +273,13 @@ function SidebarContent({
       return !(
         hasTenantPermission(TENANT_CONTACTS_READ_PERMISSION) ||
         hasTenantPermission(TENANT_CONTACTS_MANAGE_PERMISSION)
+      );
+    }
+
+    if (item.title === "Surveys") {
+      return !(
+        hasTenantPermission(TENANT_SURVEYS_READ_PERMISSION) ||
+        hasTenantPermission(TENANT_SURVEYS_MANAGE_PERMISSION)
       );
     }
 

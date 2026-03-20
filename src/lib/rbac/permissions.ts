@@ -7,6 +7,8 @@ export const TENANT_PERMISSIONS_MANAGE_PERMISSION = "tenant.permissions.manage";
 export const TENANT_MESSAGES_READ_PERMISSION = "tenant.messages.read";
 export const TENANT_CONTACTS_READ_PERMISSION = "tenant.contacts.read";
 export const TENANT_CONTACTS_MANAGE_PERMISSION = "tenant.contacts.manage";
+export const TENANT_SURVEYS_READ_PERMISSION = "tenant.surveys.read";
+export const TENANT_SURVEYS_MANAGE_PERMISSION = "tenant.surveys.manage";
 export const TENANT_CONVERSATIONS_READ_PERMISSION = "tenant.conversations.read";
 export const TENANT_CONVERSATIONS_MANAGE_PERMISSION =
   "tenant.conversations.manage";

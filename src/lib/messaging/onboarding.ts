@@ -11,6 +11,10 @@ export function shouldRedirectToProviderSetup(pathname: string) {
     return false;
   }
 
+  if (pathname.startsWith("/app/surveys")) {
+    return false;
+  }
+
   if (pathname === "/app/user") {
     return false;
   }

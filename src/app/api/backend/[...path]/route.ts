@@ -27,6 +27,8 @@ const PUBLIC_AUTH_ROUTES = new Set([
   TEAM_INVITE_REGISTER_ROUTE,
 ]);
 
+const PUBLIC_AUTH_ROUTE_PREFIXES = ["/surveys/public/"];
+
 const SESSION_RESPONSE_ROUTES = new Set([
   LOGIN_ROUTE,
   REFRESH_ROUTE,
@@ -235,7 +237,9 @@ async function handleProxy(request: NextRequest, context: RouteContext) {
   const preparedBody = await readRequestBody(request);
   const accessToken = request.cookies.get(ACCESS_TOKEN_COOKIE_NAME)?.value;
   const refreshToken = request.cookies.get(REFRESH_TOKEN_COOKIE_NAME)?.value;
-  const isPublicRoute = PUBLIC_AUTH_ROUTES.has(path);
+  const isPublicRoute =
+    PUBLIC_AUTH_ROUTES.has(path) ||
+    PUBLIC_AUTH_ROUTE_PREFIXES.some((prefix) => path.startsWith(prefix));
 
   if (path === LOGOUT_ROUTE) {
     const logoutResponse = refreshToken
