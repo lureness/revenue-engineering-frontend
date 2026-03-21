@@ -2,11 +2,14 @@ import { apiRequest } from "@/lib/api/client";
 import type {
   AssignConversationPayload,
   ConversationActionResponse,
+  CreateStandardMessagePayload,
   InboxConversationDetail,
   InboxConversationFilters,
   InboxConversationListResponse,
   InboxMessageItem,
   SendConversationMessagePayload,
+  StandardMessageItem,
+  UpdateStandardMessagePayload,
 } from "@/lib/inbox/types";
 
 export async function getInboxConversations(
@@ -80,6 +83,36 @@ export async function assignInboxConversation(
   );
 }
 
+export async function pauseInboxConversationAgent(conversationId: string) {
+  return apiRequest<ConversationActionResponse>(
+    `/inbox/conversations/${conversationId}/agent/pause`,
+    {
+      method: "POST",
+      cache: "no-store",
+    },
+  );
+}
+
+export async function resumeInboxConversationAgent(conversationId: string) {
+  return apiRequest<ConversationActionResponse>(
+    `/inbox/conversations/${conversationId}/agent/resume`,
+    {
+      method: "POST",
+      cache: "no-store",
+    },
+  );
+}
+
+export async function takeoverInboxConversationAgent(conversationId: string) {
+  return apiRequest<ConversationActionResponse>(
+    `/inbox/conversations/${conversationId}/agent/takeover`,
+    {
+      method: "POST",
+      cache: "no-store",
+    },
+  );
+}
+
 export async function sendInboxConversationMessage(
   conversationId: string,
   payload: SendConversationMessagePayload,
@@ -92,4 +125,46 @@ export async function sendInboxConversationMessage(
       cache: "no-store",
     },
   );
+}
+
+export async function getInboxStandardMessages(query?: {
+  channel?: string;
+  active_only?: boolean;
+}) {
+  return apiRequest<StandardMessageItem[]>("/inbox/standard-messages", {
+    method: "GET",
+    query,
+    cache: "no-store",
+  });
+}
+
+export async function createInboxStandardMessage(
+  payload: CreateStandardMessagePayload,
+) {
+  return apiRequest<StandardMessageItem>("/inbox/standard-messages", {
+    method: "POST",
+    body: payload,
+    cache: "no-store",
+  });
+}
+
+export async function updateInboxStandardMessage(
+  standardMessageId: string,
+  payload: UpdateStandardMessagePayload,
+) {
+  return apiRequest<StandardMessageItem>(
+    `/inbox/standard-messages/${standardMessageId}`,
+    {
+      method: "PATCH",
+      body: payload,
+      cache: "no-store",
+    },
+  );
+}
+
+export async function deleteInboxStandardMessage(standardMessageId: string) {
+  return apiRequest(`/inbox/standard-messages/${standardMessageId}`, {
+    method: "DELETE",
+    cache: "no-store",
+  });
 }

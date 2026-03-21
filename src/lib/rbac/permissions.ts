@@ -13,6 +13,12 @@ export const TENANT_CONVERSATIONS_READ_PERMISSION = "tenant.conversations.read";
 export const TENANT_CONVERSATIONS_MANAGE_PERMISSION =
   "tenant.conversations.manage";
 export const TENANT_COMPOSER_SEND_PERMISSION = "tenant.composer.send";
+export const TENANT_AGENTS_READ_PERMISSION = "tenant.agents.read";
+export const TENANT_AGENTS_MANAGE_PERMISSION = "tenant.agents.manage";
+export const TENANT_STANDARD_MESSAGES_READ_PERMISSION =
+  "tenant.standard_messages.read";
+export const TENANT_STANDARD_MESSAGES_MANAGE_PERMISSION =
+  "tenant.standard_messages.manage";
 export const TENANT_AUDIT_LOGS_READ_PERMISSION = "tenant.audit_logs.read";
 export const TENANT_METRICS_READ_PERMISSION = "tenant.metrics.read";
 export const TENANT_TEAMS_READ_PERMISSION = "tenant.teams.read";

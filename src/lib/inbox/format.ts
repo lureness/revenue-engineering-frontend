@@ -1,4 +1,5 @@
 import type {
+  ConversationAgentStatus,
   ConversationStatus,
   InboxConversationListItem,
   InboxMessageItem,
@@ -16,6 +17,13 @@ const STATUS_LABELS: Record<string, string> = {
   closed: "Encerrada",
 };
 
+const AGENT_STATUS_LABELS: Record<string, string> = {
+  inactive: "Inativo",
+  active: "Ativo",
+  paused: "Pausado",
+  handoff: "Atendimento humano",
+};
+
 const DIRECTION_LABELS: Record<string, string> = {
   inbound: "Entrada",
   outbound: "Saída",
@@ -27,6 +35,12 @@ export function getInboxChannelLabel(channel: MessageChannel) {
 
 export function getInboxConversationStatusLabel(status: ConversationStatus) {
   return STATUS_LABELS[status] ?? status;
+}
+
+export function getInboxConversationAgentStatusLabel(
+  status: ConversationAgentStatus,
+) {
+  return AGENT_STATUS_LABELS[status] ?? status;
 }
 
 export function getInboxMessageDirectionLabel(direction: MessageDirection) {

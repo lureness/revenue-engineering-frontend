@@ -46,7 +46,6 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { publicEnv } from "@/lib/env";
 import {
   TENANT_AUDIT_LOGS_READ_PERMISSION,
   TENANT_CONTACTS_MANAGE_PERMISSION,
@@ -321,25 +320,6 @@ function SidebarContent({
             </div>
           ) : null}
         </div>
-      )}
-
-      {collapsed ? null : (
-        <Card size="sm" className="bg-card/85 shadow-sm">
-          <CardContent className="grid gap-3 pt-3">
-            <Badge variant="secondary">Ambiente</Badge>
-            <div className="space-y-1">
-              <p className="text-sm font-medium text-foreground">
-                Frontend pronto para integração
-              </p>
-              <p className="text-sm leading-6 text-muted-foreground">
-                Base de API configurada para os próximos domínios:
-              </p>
-            </div>
-            <code className="overflow-hidden text-ellipsis whitespace-nowrap rounded-xl bg-foreground/5 px-3 py-2 font-mono text-[0.72rem] text-foreground">
-              {publicEnv.apiBaseUrl}
-            </code>
-          </CardContent>
-        </Card>
       )}
 
       <nav

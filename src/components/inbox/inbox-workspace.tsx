@@ -2,17 +2,24 @@
 
 import {
   BookUser,
+  Bot,
   CheckCheck,
   Command,
+  FileText,
   Inbox,
   Loader2,
   Lock,
   Mail,
   MessageCircleReply,
+  Pause,
+  Play,
+  Plus,
   RefreshCcw,
   Search,
   SendHorizontal,
   SlidersHorizontal,
+  Sparkles,
+  Trash2,
   UsersRound,
   X,
 } from "lucide-react";
@@ -28,6 +35,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Empty,
   EmptyDescription,
@@ -58,14 +66,22 @@ import type { ContactItem } from "@/lib/contacts/types";
 import {
   assignInboxConversation,
   closeInboxConversation,
+  createInboxStandardMessage,
+  deleteInboxStandardMessage,
   getInboxConversationDetail,
   getInboxConversations,
+  getInboxStandardMessages,
   markInboxConversationAsRead,
+  pauseInboxConversationAgent,
   reopenInboxConversation,
+  resumeInboxConversationAgent,
   sendInboxConversationMessage,
+  takeoverInboxConversationAgent,
+  updateInboxStandardMessage,
 } from "@/lib/inbox/api";
 import {
   getInboxChannelLabel,
+  getInboxConversationAgentStatusLabel,
   getInboxConversationDisplayName,
   getInboxConversationPreview,
   getInboxConversationStatusLabel,
@@ -73,18 +89,25 @@ import {
   getInboxMessageTimestamp,
 } from "@/lib/inbox/format";
 import type {
+  CreateStandardMessagePayload,
   InboxConversationDetail,
   InboxConversationListItem,
+  StandardMessageItem,
+  UpdateStandardMessagePayload,
 } from "@/lib/inbox/types";
 import { formatDateTime } from "@/lib/observability/format";
 import { getTenantUsers } from "@/lib/rbac/api";
 import {
+  TENANT_AGENTS_MANAGE_PERMISSION,
+  TENANT_AGENTS_READ_PERMISSION,
   TENANT_COMPOSER_SEND_PERMISSION,
   TENANT_CONTACTS_MANAGE_PERMISSION,
   TENANT_CONTACTS_READ_PERMISSION,
   TENANT_CONVERSATIONS_MANAGE_PERMISSION,
   TENANT_CONVERSATIONS_READ_PERMISSION,
   TENANT_MEMBERS_READ_PERMISSION,
+  TENANT_STANDARD_MESSAGES_MANAGE_PERMISSION,
+  TENANT_STANDARD_MESSAGES_READ_PERMISSION,
   TENANT_TEAMS_READ_PERMISSION,
 } from "@/lib/rbac/permissions";
 import type { TenantUserItem } from "@/lib/rbac/types";
@@ -100,6 +123,13 @@ const STATUS_FILTER_OPTIONS = [
 
 const CHANNEL_FILTER_OPTIONS = [
   { label: "Todos", value: "all" },
+  { label: "WhatsApp", value: "whatsapp" },
+  { label: "SMS", value: "sms" },
+  { label: "E-mail", value: "email" },
+] as const;
+
+const STANDARD_MESSAGE_CHANNEL_OPTIONS = [
+  { label: "Todos os canais compatíveis", value: "" },
   { label: "WhatsApp", value: "whatsapp" },
   { label: "SMS", value: "sms" },
   { label: "E-mail", value: "email" },
@@ -125,6 +155,28 @@ type ActiveFilterChip = {
     | "contact_id";
   label: string;
 };
+
+type StandardMessageFormState = {
+  code: string;
+  name: string;
+  description: string;
+  channel: string;
+  subject_template: string;
+  body_template: string;
+  is_active: boolean;
+};
+
+function createEmptyStandardMessageForm(): StandardMessageFormState {
+  return {
+    code: "",
+    name: "",
+    description: "",
+    channel: "",
+    subject_template: "",
+    body_template: "",
+    is_active: true,
+  };
+}
 
 function SelectField({
   label,
@@ -212,6 +264,49 @@ function getContactOptionLabel(contact: ContactItem) {
   );
 }
 
+function getStandardMessageChannelLabel(channel: string | null) {
+  if (!channel) {
+    return "Multicanal";
+  }
+
+  return getInboxChannelLabel(channel as "email" | "sms" | "whatsapp");
+}
+
+function getSurveyScoreCopy(conversation: InboxConversationDetail) {
+  if (!conversation.survey) {
+    return null;
+  }
+
+  const { total_score, max_score, percentage } = conversation.survey;
+  if (
+    typeof total_score !== "number" ||
+    typeof max_score !== "number" ||
+    max_score <= 0
+  ) {
+    return null;
+  }
+
+  const resolvedPercentage =
+    typeof percentage === "number"
+      ? Math.round(percentage)
+      : Math.round((total_score / max_score) * 100);
+
+  return `${total_score}/${max_score} pontos • ${resolvedPercentage}%`;
+}
+
+function getAgentStatusDescription(conversation: InboxConversationDetail) {
+  switch (conversation.agent_status) {
+    case "active":
+      return "O especialista segue conduzindo a conversa automaticamente.";
+    case "paused":
+      return "O especialista está pausado e pode ser retomado a qualquer momento.";
+    case "handoff":
+      return "O atendimento já está em modo humano para esta conversa.";
+    default:
+      return "Nenhum especialista está ativo nesta conversa.";
+  }
+}
+
 export function InboxWorkspace() {
   const { hasTenantPermission, status: accessStatus } = useAccess();
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -239,15 +334,37 @@ export function InboxWorkspace() {
   const [assignmentTeamId, setAssignmentTeamId] = useState("");
   const [messageSubject, setMessageSubject] = useState("");
   const [messageBody, setMessageBody] = useState("");
+  const [selectedStandardMessageId, setSelectedStandardMessageId] =
+    useState("");
+  const [standardMessages, setStandardMessages] = useState<
+    StandardMessageItem[]
+  >([]);
+  const [editingStandardMessageId, setEditingStandardMessageId] = useState<
+    string | null
+  >(null);
+  const [standardMessageForm, setStandardMessageForm] =
+    useState<StandardMessageFormState>(createEmptyStandardMessageForm);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [standardMessagesError, setStandardMessagesError] = useState<
+    string | null
+  >(null);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isLoadingConversationDetail, setIsLoadingConversationDetail] =
     useState(false);
+  const [isLoadingStandardMessages, setIsLoadingStandardMessages] =
+    useState(false);
   const [isSubmittingAssignment, setIsSubmittingAssignment] = useState(false);
   const [isSubmittingMessage, setIsSubmittingMessage] = useState(false);
+  const [isSubmittingStandardMessage, setIsSubmittingStandardMessage] =
+    useState(false);
+  const [isDeletingStandardMessage, setIsDeletingStandardMessage] =
+    useState(false);
   const [actionPending, setActionPending] = useState<
     "read" | "close" | "reopen" | null
+  >(null);
+  const [agentActionPending, setAgentActionPending] = useState<
+    "pause" | "resume" | "takeover" | null
   >(null);
 
   const canReadConversations = hasTenantPermission(
@@ -262,6 +379,15 @@ export function InboxWorkspace() {
   const canReadContacts =
     hasTenantPermission(TENANT_CONTACTS_READ_PERMISSION) ||
     hasTenantPermission(TENANT_CONTACTS_MANAGE_PERMISSION);
+  const canReadAgents = hasTenantPermission(TENANT_AGENTS_READ_PERMISSION);
+  const canManageAgents = hasTenantPermission(TENANT_AGENTS_MANAGE_PERMISSION);
+  const canSeeAgentContext = canReadAgents || canManageAgents;
+  const canReadStandardMessages =
+    hasTenantPermission(TENANT_STANDARD_MESSAGES_READ_PERMISSION) ||
+    hasTenantPermission(TENANT_STANDARD_MESSAGES_MANAGE_PERMISSION);
+  const canManageStandardMessages = hasTenantPermission(
+    TENANT_STANDARD_MESSAGES_MANAGE_PERMISSION,
+  );
 
   const totalUnread = useMemo(
     () =>
@@ -366,6 +492,35 @@ export function InboxWorkspace() {
     Boolean(searchQuery) ||
     activeFilterChips.length > 0;
   const hasActiveSearch = Boolean(searchInput.trim()) || Boolean(searchQuery);
+  const compatibleStandardMessages = useMemo(() => {
+    if (!selectedConversation) {
+      return [];
+    }
+
+    return standardMessages.filter((message) => {
+      if (!message.is_active) {
+        return false;
+      }
+
+      return (
+        !message.channel || message.channel === selectedConversation.channel
+      );
+    });
+  }, [selectedConversation, standardMessages]);
+  const selectedStandardMessage = useMemo(
+    () =>
+      standardMessages.find(
+        (message) => message.id === selectedStandardMessageId,
+      ) ?? null,
+    [selectedStandardMessageId, standardMessages],
+  );
+  const editingStandardMessage = useMemo(
+    () =>
+      standardMessages.find(
+        (message) => message.id === editingStandardMessageId,
+      ) ?? null,
+    [editingStandardMessageId, standardMessages],
+  );
 
   const loadConversations = useCallback(
     async (preferredConversationId?: string | null) => {
@@ -461,6 +616,33 @@ export function InboxWorkspace() {
     [canReadConversations],
   );
 
+  const loadStandardMessages = useCallback(async () => {
+    if (!canReadStandardMessages) {
+      setStandardMessages([]);
+      setStandardMessagesError(null);
+      setIsLoadingStandardMessages(false);
+      return;
+    }
+
+    setIsLoadingStandardMessages(true);
+    setStandardMessagesError(null);
+
+    try {
+      const items = await getInboxStandardMessages({
+        active_only: !canManageStandardMessages,
+      });
+      setStandardMessages(items);
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Não foi possível carregar as mensagens padrão.",
+      });
+      setStandardMessages([]);
+      setStandardMessagesError(presentation.title);
+    } finally {
+      setIsLoadingStandardMessages(false);
+    }
+  }, [canManageStandardMessages, canReadStandardMessages]);
+
   const refreshSelectedConversation = useCallback(async () => {
     if (!selectedConversationId) {
       return;
@@ -534,6 +716,14 @@ export function InboxWorkspace() {
   }, [accessStatus, canReadContacts, canReadMembers, canReadTeams]);
 
   useEffect(() => {
+    if (accessStatus !== "ready") {
+      return;
+    }
+
+    void loadStandardMessages();
+  }, [accessStatus, loadStandardMessages]);
+
+  useEffect(() => {
     const handler = window.setTimeout(() => {
       setSearchQuery(searchInput.trim());
     }, 300);
@@ -570,6 +760,7 @@ export function InboxWorkspace() {
       setAssignmentTeamId("");
       setMessageSubject("");
       setMessageBody("");
+      setSelectedStandardMessageId("");
       return;
     }
 
@@ -581,7 +772,26 @@ export function InboxWorkspace() {
         : "",
     );
     setMessageBody("");
+    setSelectedStandardMessageId("");
   }, [selectedConversation]);
+
+  useEffect(() => {
+    if (!selectedConversation || !selectedStandardMessageId) {
+      return;
+    }
+
+    const isStillCompatible = compatibleStandardMessages.some(
+      (message) => message.id === selectedStandardMessageId,
+    );
+
+    if (!isStillCompatible) {
+      setSelectedStandardMessageId("");
+    }
+  }, [
+    compatibleStandardMessages,
+    selectedConversation,
+    selectedStandardMessageId,
+  ]);
 
   function handleSearchSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -625,6 +835,24 @@ export function InboxWorkspace() {
         setFilterContactId("");
         break;
     }
+  }
+
+  function resetStandardMessageEditor() {
+    setEditingStandardMessageId(null);
+    setStandardMessageForm(createEmptyStandardMessageForm());
+  }
+
+  function startEditingStandardMessage(message: StandardMessageItem) {
+    setEditingStandardMessageId(message.id);
+    setStandardMessageForm({
+      code: message.code,
+      name: message.name,
+      description: message.description,
+      channel: message.channel ?? "",
+      subject_template: message.subject_template ?? "",
+      body_template: message.body_template,
+      is_active: message.is_active,
+    });
   }
 
   async function handleMarkAsRead() {
@@ -696,6 +924,75 @@ export function InboxWorkspace() {
     }
   }
 
+  async function handlePauseAgent() {
+    if (!selectedConversationId) {
+      return;
+    }
+
+    setAgentActionPending("pause");
+
+    try {
+      await pauseInboxConversationAgent(selectedConversationId);
+      await refreshSelectedConversation();
+      toast.success("Especialista pausado com sucesso.");
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Não foi possível pausar o especialista.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
+    } finally {
+      setAgentActionPending(null);
+    }
+  }
+
+  async function handleResumeAgent() {
+    if (!selectedConversationId) {
+      return;
+    }
+
+    setAgentActionPending("resume");
+
+    try {
+      await resumeInboxConversationAgent(selectedConversationId);
+      await refreshSelectedConversation();
+      toast.success("Especialista retomado com sucesso.");
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Não foi possível retomar o especialista.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
+    } finally {
+      setAgentActionPending(null);
+    }
+  }
+
+  async function handleTakeoverConversation() {
+    if (!selectedConversationId) {
+      return;
+    }
+
+    setAgentActionPending("takeover");
+
+    try {
+      await takeoverInboxConversationAgent(selectedConversationId);
+      await refreshSelectedConversation();
+      toast.success("Atendimento assumido pelo colaborador.");
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Não foi possível assumir o atendimento agora.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
+    } finally {
+      setAgentActionPending(null);
+    }
+  }
+
   async function handleAssignConversation(
     event: React.FormEvent<HTMLFormElement>,
   ) {
@@ -733,8 +1030,10 @@ export function InboxWorkspace() {
       return;
     }
 
-    if (!messageBody.trim()) {
-      toast.error("Escreva a mensagem antes de enviar.");
+    const trimmedBody = messageBody.trim();
+
+    if (!trimmedBody && !selectedStandardMessageId) {
+      toast.error("Escreva a mensagem ou selecione uma mensagem padrão.");
       return;
     }
 
@@ -742,14 +1041,16 @@ export function InboxWorkspace() {
 
     try {
       await sendInboxConversationMessage(selectedConversationId, {
-        body_text: messageBody.trim(),
+        body_text: trimmedBody || null,
         subject:
           selectedConversation.channel === "email"
             ? messageSubject.trim() || null
             : undefined,
+        standard_message_id: selectedStandardMessageId || null,
       });
       await refreshSelectedConversation();
       setMessageBody("");
+      setSelectedStandardMessageId("");
       toast.success("Mensagem enviada com sucesso.");
     } catch (error) {
       const presentation = formatApiErrorMessage(error, {
@@ -760,6 +1061,84 @@ export function InboxWorkspace() {
       });
     } finally {
       setIsSubmittingMessage(false);
+    }
+  }
+
+  async function handleSubmitStandardMessage(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+
+    if (!canManageStandardMessages) {
+      return;
+    }
+
+    setIsSubmittingStandardMessage(true);
+
+    try {
+      if (editingStandardMessageId) {
+        const payload: UpdateStandardMessagePayload = {
+          name: standardMessageForm.name.trim(),
+          description: standardMessageForm.description.trim(),
+          channel: standardMessageForm.channel || null,
+          subject_template: standardMessageForm.subject_template.trim() || null,
+          body_template: standardMessageForm.body_template.trim(),
+          is_active: standardMessageForm.is_active,
+        };
+        await updateInboxStandardMessage(editingStandardMessageId, payload);
+        toast.success("Mensagem padrão atualizada com sucesso.");
+      } else {
+        const payload: CreateStandardMessagePayload = {
+          code: standardMessageForm.code.trim(),
+          name: standardMessageForm.name.trim(),
+          description: standardMessageForm.description.trim(),
+          channel: standardMessageForm.channel || null,
+          subject_template: standardMessageForm.subject_template.trim() || null,
+          body_template: standardMessageForm.body_template.trim(),
+          is_active: standardMessageForm.is_active,
+        };
+        await createInboxStandardMessage(payload);
+        toast.success("Mensagem padrão criada com sucesso.");
+      }
+
+      await loadStandardMessages();
+      resetStandardMessageEditor();
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Não foi possível salvar a mensagem padrão.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
+    } finally {
+      setIsSubmittingStandardMessage(false);
+    }
+  }
+
+  async function handleDeleteStandardMessage() {
+    if (!editingStandardMessageId || !canManageStandardMessages) {
+      return;
+    }
+
+    setIsDeletingStandardMessage(true);
+
+    try {
+      await deleteInboxStandardMessage(editingStandardMessageId);
+      await loadStandardMessages();
+      resetStandardMessageEditor();
+      if (selectedStandardMessageId === editingStandardMessageId) {
+        setSelectedStandardMessageId("");
+      }
+      toast.success("Mensagem padrão removida com sucesso.");
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Não foi possível remover a mensagem padrão.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
+    } finally {
+      setIsDeletingStandardMessage(false);
     }
   }
 
@@ -1140,6 +1519,28 @@ export function InboxWorkspace() {
                               {conversation.unread_count} nova(s)
                             </Badge>
                           ) : null}
+                          {canSeeAgentContext && conversation.agent_id ? (
+                            <Badge
+                              variant={
+                                conversation.agent_status === "active"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                            >
+                              <Bot className="size-3" />
+                              {getInboxConversationAgentStatusLabel(
+                                conversation.agent_status,
+                              )}
+                            </Badge>
+                          ) : null}
+                          {conversation.survey_result_profile_name ? (
+                            <Badge
+                              variant={isSelected ? "secondary" : "outline"}
+                            >
+                              <Sparkles className="size-3" />
+                              {conversation.survey_result_profile_name}
+                            </Badge>
+                          ) : null}
                         </div>
                       </div>
                       <p
@@ -1233,6 +1634,26 @@ export function InboxWorkspace() {
                           {selectedConversation.unread_count} não lida(s)
                         </Badge>
                       ) : null}
+                      {canSeeAgentContext && selectedConversation.agent_id ? (
+                        <Badge
+                          variant={
+                            selectedConversation.agent_status === "active"
+                              ? "secondary"
+                              : "outline"
+                          }
+                        >
+                          <Bot className="size-3" />
+                          {getInboxConversationAgentStatusLabel(
+                            selectedConversation.agent_status,
+                          )}
+                        </Badge>
+                      ) : null}
+                      {selectedConversation.survey?.result_profile_name ? (
+                        <Badge variant="outline">
+                          <Sparkles className="size-3" />
+                          {selectedConversation.survey.result_profile_name}
+                        </Badge>
+                      ) : null}
                     </div>
                     <div className="space-y-1">
                       <CardTitle className="text-2xl tracking-tight text-foreground">
@@ -1307,10 +1728,159 @@ export function InboxWorkspace() {
                         </Button>
                       )
                     ) : null}
+                    {canManageAgents && selectedConversation.agent_id ? (
+                      selectedConversation.agent_status === "active" ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={agentActionPending === "pause"}
+                          onClick={() => void handlePauseAgent()}
+                        >
+                          <Pause className="size-4" />
+                          {agentActionPending === "pause"
+                            ? "Pausando..."
+                            : "Pausar agente"}
+                        </Button>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={agentActionPending === "resume"}
+                          onClick={() => void handleResumeAgent()}
+                        >
+                          <Play className="size-4" />
+                          {agentActionPending === "resume"
+                            ? "Retomando..."
+                            : "Retomar agente"}
+                        </Button>
+                      )
+                    ) : null}
+                    {canManageAgents &&
+                    selectedConversation.agent_id &&
+                    selectedConversation.agent_status !== "handoff" ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={agentActionPending === "takeover"}
+                        onClick={() => void handleTakeoverConversation()}
+                      >
+                        <UsersRound className="size-4" />
+                        {agentActionPending === "takeover"
+                          ? "Assumindo..."
+                          : "Assumir atendimento"}
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </CardHeader>
               <CardContent className="grid gap-4">
+                <div
+                  className={cn(
+                    "grid gap-4",
+                    canSeeAgentContext ? "lg:grid-cols-2" : "lg:grid-cols-1",
+                  )}
+                >
+                  {canSeeAgentContext ? (
+                    <div className="rounded-[1.35rem] border border-border/70 bg-background/80 px-4 py-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                            Especialista
+                          </p>
+                          <p className="mt-1 text-sm font-medium text-foreground">
+                            {selectedConversation.agent_name ??
+                              "Sem especialista ativo"}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={
+                            selectedConversation.agent_status === "active"
+                              ? "secondary"
+                              : "outline"
+                          }
+                        >
+                          <Bot className="size-3" />
+                          {getInboxConversationAgentStatusLabel(
+                            selectedConversation.agent_status,
+                          )}
+                        </Badge>
+                      </div>
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        {selectedConversation.agent_role_title
+                          ? `${selectedConversation.agent_role_title} • `
+                          : null}
+                        {getAgentStatusDescription(selectedConversation)}
+                      </p>
+                      {selectedConversation.agent_handoff_at ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Atendimento humano desde{" "}
+                          {formatDateTime(
+                            selectedConversation.agent_handoff_at,
+                          )}
+                        </p>
+                      ) : selectedConversation.agent_paused_at ? (
+                        <p className="mt-2 text-xs text-muted-foreground">
+                          Pausado em{" "}
+                          {formatDateTime(selectedConversation.agent_paused_at)}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                  <div className="rounded-[1.35rem] border border-border/70 bg-background/80 px-4 py-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                          Origem do survey
+                        </p>
+                        <p className="mt-1 text-sm font-medium text-foreground">
+                          {selectedConversation.survey?.template_name ??
+                            "Conversa sem survey vinculado"}
+                        </p>
+                      </div>
+                      {selectedConversation.survey ? (
+                        <Badge variant="outline">
+                          <Sparkles className="size-3" />
+                          {selectedConversation.survey.result_profile_name ??
+                            "Diagnóstico"}
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline">Sem survey</Badge>
+                      )}
+                    </div>
+                    {selectedConversation.survey ? (
+                      <div className="mt-3 grid gap-2 text-sm text-muted-foreground">
+                        {getSurveyScoreCopy(selectedConversation) ? (
+                          <p>{getSurveyScoreCopy(selectedConversation)}</p>
+                        ) : null}
+                        {selectedConversation.survey.company_name ? (
+                          <p>
+                            Empresa: {selectedConversation.survey.company_name}
+                          </p>
+                        ) : null}
+                        {selectedConversation.survey.respondent_name ? (
+                          <p>
+                            Respondente:{" "}
+                            {selectedConversation.survey.respondent_name}
+                          </p>
+                        ) : null}
+                        {selectedConversation.survey.completed_at ? (
+                          <p>
+                            Concluído em{" "}
+                            {formatDateTime(
+                              selectedConversation.survey.completed_at,
+                            )}
+                          </p>
+                        ) : null}
+                      </div>
+                    ) : (
+                      <p className="mt-3 text-sm text-muted-foreground">
+                        Quando a conversa nascer de um survey desbloqueado, o
+                        resultado do diagnóstico aparece aqui.
+                      </p>
+                    )}
+                  </div>
+                </div>
+
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-[1.25rem] border border-border/70 bg-background/80 px-4 py-3">
                     <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
@@ -1524,6 +2094,51 @@ export function InboxWorkspace() {
                 </CardHeader>
                 <CardContent>
                   <form className="grid gap-4" onSubmit={handleSendMessage}>
+                    {canReadStandardMessages ? (
+                      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto]">
+                        <SelectField
+                          label="Mensagem padrão"
+                          value={selectedStandardMessageId}
+                          onChange={setSelectedStandardMessageId}
+                          options={compatibleStandardMessages.map(
+                            (message) => ({
+                              label: message.name,
+                              value: message.id,
+                            }),
+                          )}
+                          placeholder={
+                            compatibleStandardMessages.length > 0
+                              ? "Selecione uma mensagem padrão"
+                              : "Nenhuma mensagem padrão compatível"
+                          }
+                          disabled={
+                            Boolean(composerDisabledReason) ||
+                            isLoadingStandardMessages ||
+                            compatibleStandardMessages.length === 0
+                          }
+                          description={
+                            selectedStandardMessage
+                              ? `Canal: ${getStandardMessageChannelLabel(
+                                  selectedStandardMessage.channel,
+                                )}${selectedStandardMessage.description ? ` • ${selectedStandardMessage.description}` : ""}`
+                              : "Ao enviar sem texto manual, o template selecionado é renderizado com o contexto da conversa."
+                          }
+                        />
+                        <div className="grid content-end gap-2">
+                          {selectedStandardMessage ? (
+                            <div className="rounded-[1.2rem] border border-border/70 bg-background/80 px-4 py-3 text-sm text-muted-foreground">
+                              <p className="font-medium text-foreground">
+                                {selectedStandardMessage.name}
+                              </p>
+                              <p className="mt-1 line-clamp-3 whitespace-pre-wrap">
+                                {selectedStandardMessage.body_template}
+                              </p>
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    ) : null}
+
                     {selectedConversation.channel === "email" ? (
                       <Field>
                         <FieldLabel htmlFor="composer-subject">
@@ -1560,6 +2175,22 @@ export function InboxWorkspace() {
                       {composerDisabledReason ? (
                         <FieldDescription>
                           {composerDisabledReason}
+                        </FieldDescription>
+                      ) : selectedConversation.agent_id &&
+                        selectedConversation.agent_status === "active" ? (
+                        <FieldDescription>
+                          Ao enviar manualmente, o atendimento passa para humano
+                          e o especialista fica em handoff.
+                        </FieldDescription>
+                      ) : selectedStandardMessage && !messageBody.trim() ? (
+                        <FieldDescription>
+                          A mensagem padrão será renderizada no envio com os
+                          dados do contato, survey e conversa atual.
+                        </FieldDescription>
+                      ) : selectedStandardMessage ? (
+                        <FieldDescription>
+                          O texto manual sobrescreve o corpo da mensagem padrão
+                          selecionada.
                         </FieldDescription>
                       ) : (
                         <FieldDescription>
@@ -1601,6 +2232,364 @@ export function InboxWorkspace() {
                 </EmptyHeader>
               </Empty>
             )}
+
+            {canReadStandardMessages ? (
+              <Card className="bg-card/85 shadow-sm">
+                <CardHeader className="space-y-1">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div className="space-y-1">
+                      <CardTitle>Mensagens padrão</CardTitle>
+                      <CardDescription>
+                        Cadastre respostas reutilizáveis para acelerar o
+                        atendimento dentro do inbox.
+                      </CardDescription>
+                    </div>
+                    {canManageStandardMessages ? (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={resetStandardMessageEditor}
+                      >
+                        <Plus className="size-4" />
+                        Nova mensagem padrão
+                      </Button>
+                    ) : null}
+                  </div>
+                </CardHeader>
+                <CardContent className="grid gap-5">
+                  {standardMessagesError ? (
+                    <div className="rounded-[1.2rem] border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+                      {standardMessagesError}
+                    </div>
+                  ) : null}
+
+                  {isLoadingStandardMessages ? (
+                    <div className="flex min-h-32 items-center justify-center text-sm text-muted-foreground">
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                      Carregando mensagens padrão...
+                    </div>
+                  ) : standardMessages.length === 0 ? (
+                    <Empty className="rounded-[1.5rem] border border-dashed border-border/70 bg-background/80 py-10">
+                      <EmptyHeader>
+                        <EmptyMedia variant="icon">
+                          <FileText className="size-4" />
+                        </EmptyMedia>
+                        <EmptyTitle>
+                          Nenhuma mensagem padrão cadastrada
+                        </EmptyTitle>
+                        <EmptyDescription>
+                          {canManageStandardMessages
+                            ? "Crie respostas reutilizáveis para o time acelerar o atendimento no inbox."
+                            : "Quando o workspace cadastrar mensagens padrão, elas ficam listadas aqui."}
+                        </EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
+                  ) : (
+                    <div className="grid gap-3">
+                      {standardMessages.map((message) => {
+                        const isSelected =
+                          message.id === editingStandardMessageId;
+
+                        return (
+                          <button
+                            key={message.id}
+                            type="button"
+                            className={cn(
+                              "grid gap-3 rounded-[1.4rem] border px-4 py-4 text-left transition-colors",
+                              isSelected
+                                ? "border-foreground/15 bg-foreground text-background shadow-sm"
+                                : "border-border/70 bg-background/80 hover:border-foreground/20 hover:bg-background",
+                            )}
+                            onClick={() =>
+                              canManageStandardMessages
+                                ? startEditingStandardMessage(message)
+                                : undefined
+                            }
+                            disabled={!canManageStandardMessages}
+                          >
+                            <div className="flex flex-wrap items-start justify-between gap-3">
+                              <div className="space-y-1">
+                                <p className="text-sm font-medium">
+                                  {message.name}
+                                </p>
+                                <p
+                                  className={cn(
+                                    "text-xs uppercase tracking-[0.14em]",
+                                    isSelected
+                                      ? "text-background/75"
+                                      : "text-muted-foreground",
+                                  )}
+                                >
+                                  {message.code}
+                                </p>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Badge
+                                  variant={isSelected ? "secondary" : "outline"}
+                                >
+                                  {getStandardMessageChannelLabel(
+                                    message.channel,
+                                  )}
+                                </Badge>
+                                <Badge
+                                  variant={
+                                    message.is_active ? "secondary" : "outline"
+                                  }
+                                >
+                                  {message.is_active ? "Ativa" : "Inativa"}
+                                </Badge>
+                              </div>
+                            </div>
+                            {message.description ? (
+                              <p
+                                className={cn(
+                                  "text-sm leading-6",
+                                  isSelected
+                                    ? "text-background/80"
+                                    : "text-muted-foreground",
+                                )}
+                              >
+                                {message.description}
+                              </p>
+                            ) : null}
+                            <p
+                              className={cn(
+                                "line-clamp-3 whitespace-pre-wrap text-sm leading-6",
+                                isSelected
+                                  ? "text-background/80"
+                                  : "text-muted-foreground",
+                              )}
+                            >
+                              {message.body_template}
+                            </p>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {canManageStandardMessages ? (
+                    <form
+                      className="grid gap-4 rounded-[1.6rem] border border-border/70 bg-background/80 p-5"
+                      onSubmit={handleSubmitStandardMessage}
+                    >
+                      <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+                        <div className="space-y-1">
+                          <h3 className="text-base font-medium text-foreground">
+                            {editingStandardMessage
+                              ? "Editar mensagem padrão"
+                              : "Cadastrar mensagem padrão"}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            Use variáveis do contexto como{" "}
+                            <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                              {"{{ contact.first_name }}"}
+                            </code>{" "}
+                            e{" "}
+                            <code className="rounded bg-muted px-1 py-0.5 text-xs">
+                              {"{{ survey.result_profile_name }}"}
+                            </code>
+                            .
+                          </p>
+                        </div>
+                        {editingStandardMessage ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={resetStandardMessageEditor}
+                          >
+                            <X className="size-4" />
+                            Cancelar edição
+                          </Button>
+                        ) : null}
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <Field>
+                          <FieldLabel htmlFor="standard-message-code">
+                            Código
+                          </FieldLabel>
+                          <FieldContent>
+                            <Input
+                              id="standard-message-code"
+                              value={standardMessageForm.code}
+                              onChange={(event) =>
+                                setStandardMessageForm((currentValue) => ({
+                                  ...currentValue,
+                                  code: event.target.value,
+                                }))
+                              }
+                              placeholder="follow-up-diagnostico"
+                              disabled={
+                                Boolean(editingStandardMessage) ||
+                                isSubmittingStandardMessage
+                              }
+                            />
+                          </FieldContent>
+                        </Field>
+
+                        <Field>
+                          <FieldLabel htmlFor="standard-message-name">
+                            Nome
+                          </FieldLabel>
+                          <FieldContent>
+                            <Input
+                              id="standard-message-name"
+                              value={standardMessageForm.name}
+                              onChange={(event) =>
+                                setStandardMessageForm((currentValue) => ({
+                                  ...currentValue,
+                                  name: event.target.value,
+                                }))
+                              }
+                              placeholder="Follow-up do diagnóstico"
+                              disabled={isSubmittingStandardMessage}
+                            />
+                          </FieldContent>
+                        </Field>
+
+                        <SelectField
+                          label="Canal"
+                          value={standardMessageForm.channel}
+                          onChange={(value) =>
+                            setStandardMessageForm((currentValue) => ({
+                              ...currentValue,
+                              channel: value,
+                            }))
+                          }
+                          options={STANDARD_MESSAGE_CHANNEL_OPTIONS.map(
+                            (option) => ({
+                              label: option.label,
+                              value: option.value,
+                            }),
+                          )}
+                          disabled={isSubmittingStandardMessage}
+                        />
+
+                        <Field>
+                          <FieldLabel htmlFor="standard-message-subject">
+                            Assunto
+                          </FieldLabel>
+                          <FieldContent>
+                            <Input
+                              id="standard-message-subject"
+                              value={standardMessageForm.subject_template}
+                              onChange={(event) =>
+                                setStandardMessageForm((currentValue) => ({
+                                  ...currentValue,
+                                  subject_template: event.target.value,
+                                }))
+                              }
+                              placeholder="Opcional, usado em e-mail"
+                              disabled={isSubmittingStandardMessage}
+                            />
+                          </FieldContent>
+                        </Field>
+
+                        <div className="md:col-span-2">
+                          <Field>
+                            <FieldLabel htmlFor="standard-message-description">
+                              Descrição
+                            </FieldLabel>
+                            <FieldContent>
+                              <Input
+                                id="standard-message-description"
+                                value={standardMessageForm.description}
+                                onChange={(event) =>
+                                  setStandardMessageForm((currentValue) => ({
+                                    ...currentValue,
+                                    description: event.target.value,
+                                  }))
+                                }
+                                placeholder="Quando usar esta mensagem padrão"
+                                disabled={isSubmittingStandardMessage}
+                              />
+                            </FieldContent>
+                          </Field>
+                        </div>
+
+                        <div className="md:col-span-2">
+                          <Field>
+                            <FieldLabel htmlFor="standard-message-body">
+                              Corpo da mensagem
+                            </FieldLabel>
+                            <FieldContent>
+                              <Textarea
+                                id="standard-message-body"
+                                value={standardMessageForm.body_template}
+                                onChange={(event) =>
+                                  setStandardMessageForm((currentValue) => ({
+                                    ...currentValue,
+                                    body_template: event.target.value,
+                                  }))
+                                }
+                                className="min-h-36 rounded-[1.25rem] px-4 py-3"
+                                placeholder="Olá {{ contact.first_name }}..."
+                                disabled={isSubmittingStandardMessage}
+                              />
+                            </FieldContent>
+                          </Field>
+                        </div>
+                      </div>
+
+                      <div className="inline-flex items-center gap-3 rounded-[1rem] border border-border/70 bg-background/80 px-4 py-3 text-sm text-foreground">
+                        <Checkbox
+                          id="standard-message-active"
+                          checked={standardMessageForm.is_active}
+                          onCheckedChange={(checked) =>
+                            setStandardMessageForm((currentValue) => ({
+                              ...currentValue,
+                              is_active: Boolean(checked),
+                            }))
+                          }
+                          disabled={isSubmittingStandardMessage}
+                        />
+                        Disponível no composer do inbox
+                      </div>
+
+                      <div className="flex flex-wrap items-center justify-between gap-3">
+                        {editingStandardMessage ? (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => void handleDeleteStandardMessage()}
+                            disabled={
+                              isDeletingStandardMessage ||
+                              isSubmittingStandardMessage
+                            }
+                          >
+                            <Trash2 className="size-4" />
+                            {isDeletingStandardMessage
+                              ? "Removendo..."
+                              : "Remover"}
+                          </Button>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">
+                            Essa biblioteca fica disponível direto no composer
+                            das conversas.
+                          </span>
+                        )}
+
+                        <Button
+                          type="submit"
+                          disabled={
+                            isSubmittingStandardMessage ||
+                            isDeletingStandardMessage
+                          }
+                        >
+                          <FileText className="size-4" />
+                          {isSubmittingStandardMessage
+                            ? "Salvando..."
+                            : editingStandardMessage
+                              ? "Salvar alterações"
+                              : "Criar mensagem"}
+                        </Button>
+                      </div>
+                    </form>
+                  ) : null}
+                </CardContent>
+              </Card>
+            ) : null}
           </>
         ) : null}
       </div>

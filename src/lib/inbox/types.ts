@@ -1,6 +1,12 @@
 import type { MessageChannel, MessageDirection } from "@/lib/messaging/types";
 
 export type ConversationStatus = "open" | "closed" | string;
+export type ConversationAgentStatus =
+  | "inactive"
+  | "active"
+  | "paused"
+  | "handoff"
+  | string;
 
 export type InboxConversationListItem = {
   id: string;
@@ -15,6 +21,8 @@ export type InboxConversationListItem = {
   unread_count: number;
   assigned_user_id: string | null;
   assigned_team_id: string | null;
+  agent_id: string | null;
+  agent_status: ConversationAgentStatus;
   last_message_id: string | null;
   last_message_at: string | null;
   last_inbound_message_at: string | null;
@@ -24,6 +32,8 @@ export type InboxConversationListItem = {
   contact_phone_number: string | null;
   last_message_direction: MessageDirection | null;
   last_message_preview: string | null;
+  survey_submission_id: string | null;
+  survey_result_profile_name: string | null;
 };
 
 export type InboxConversationListResponse = {
@@ -71,6 +81,14 @@ export type InboxConversationDetail = {
   unread_count: number;
   assigned_user_id: string | null;
   assigned_team_id: string | null;
+  agent_id: string | null;
+  agent_status: ConversationAgentStatus;
+  agent_name: string | null;
+  agent_role_title: string | null;
+  agent_paused_at: string | null;
+  agent_paused_by_user_id: string | null;
+  agent_handoff_at: string | null;
+  agent_handoff_user_id: string | null;
   last_message_id: string | null;
   last_message_at: string | null;
   last_inbound_message_at: string | null;
@@ -81,7 +99,24 @@ export type InboxConversationDetail = {
   contact_name: string | null;
   contact_email: string | null;
   contact_phone_number: string | null;
+  survey: InboxConversationSurveyContext | null;
   messages: InboxMessageItem[];
+};
+
+export type InboxConversationSurveyContext = {
+  submission_id: string;
+  template_name: string | null;
+  result_profile_code: string | null;
+  result_profile_name: string | null;
+  total_score: number | null;
+  max_score: number | null;
+  percentage: number | null;
+  respondent_name: string | null;
+  company_name: string | null;
+  annual_revenue_range: string | null;
+  sales_team_size_range: string | null;
+  completed_at: string | null;
+  unlocked_at: string | null;
 };
 
 export type InboxConversationFilters = {
@@ -102,8 +137,9 @@ export type AssignConversationPayload = {
 };
 
 export type SendConversationMessagePayload = {
-  body_text: string;
+  body_text?: string | null;
   subject?: string | null;
+  standard_message_id?: string | null;
 };
 
 export type ConversationActionResponse = {
@@ -112,6 +148,43 @@ export type ConversationActionResponse = {
   unread_count: number;
   assigned_user_id: string | null;
   assigned_team_id: string | null;
+  agent_status: ConversationAgentStatus;
+  agent_paused_at: string | null;
+  agent_handoff_at: string | null;
   closed_at: string | null;
   updated_at: string;
+};
+
+export type StandardMessageItem = {
+  id: string;
+  tenant_id: string;
+  created_by_user_id: string | null;
+  code: string;
+  name: string;
+  description: string;
+  channel: MessageChannel | null;
+  subject_template: string | null;
+  body_template: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CreateStandardMessagePayload = {
+  code: string;
+  name: string;
+  description?: string;
+  channel?: string | null;
+  subject_template?: string | null;
+  body_template: string;
+  is_active?: boolean;
+};
+
+export type UpdateStandardMessagePayload = {
+  name?: string;
+  description?: string;
+  channel?: string | null;
+  subject_template?: string | null;
+  body_template?: string;
+  is_active?: boolean;
 };

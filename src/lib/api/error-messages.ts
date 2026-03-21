@@ -130,6 +130,18 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
     title:
       "Você não pode enviar mensagens a partir das conversas deste workspace.",
   },
+  "missing permission: tenant.agents.read": {
+    title: "Você não pode visualizar os agentes deste workspace.",
+  },
+  "missing permission: tenant.agents.manage": {
+    title: "Você não pode gerenciar os agentes deste workspace.",
+  },
+  "missing permission: tenant.standard_messages.read": {
+    title: "Você não pode visualizar as mensagens padrão deste workspace.",
+  },
+  "missing permission: tenant.standard_messages.manage": {
+    title: "Você não pode gerenciar as mensagens padrão deste workspace.",
+  },
   "missing permission: tenant.audit_logs.read": {
     title: "Você não pode visualizar os logs deste workspace.",
   },
@@ -233,6 +245,24 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   "message log entry was not found after sending": {
     title:
       "A mensagem foi enviada, mas não conseguimos localizar o registro dela no histórico.",
+  },
+  "standard message not found": {
+    title: "A mensagem padrão informada não foi encontrada.",
+  },
+  "standard message code already exists in this workspace": {
+    title: "Já existe uma mensagem padrão com esse código neste workspace.",
+  },
+  "unsupported standard message channel": {
+    title: "O canal informado não é compatível com mensagens padrão.",
+  },
+  "standard message channel is not compatible with this conversation": {
+    title: "Essa mensagem padrão não pode ser usada neste canal.",
+  },
+  "standard message body rendered empty": {
+    title: "A mensagem padrão gerou um conteúdo vazio.",
+  },
+  "conversation does not have an active agent": {
+    title: "Essa conversa ainda não tem um agente ativo.",
   },
   "invalid current password": {
     title: "A senha atual informada está incorreta.",
