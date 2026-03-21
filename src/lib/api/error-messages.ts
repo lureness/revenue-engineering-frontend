@@ -149,7 +149,7 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
     title: "Você não pode visualizar métricas deste workspace.",
   },
   "provider account already exists for this tenant or account SID": {
-    title: "Já existe uma conta de provedor Twilio para este workspace.",
+    title: "Já existe uma conta de provedor Meta para este workspace.",
   },
   "provider account not found": {
     title: "A conta de provedor informada não foi encontrada.",
@@ -158,16 +158,16 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
     title: "Já existe um sender do WhatsApp para esse número ou identificador.",
   },
   "whatsapp sender is already provisioned on twilio": {
-    title: "Esse sender já foi provisionado na Twilio.",
+    title: "Esse sender já foi provisionado na Meta.",
   },
   "whatsapp sender is not provisioned on twilio": {
-    title: "Esse sender ainda não foi provisionado na Twilio.",
+    title: "Esse sender ainda não foi provisionado na Meta.",
   },
   "whatsapp sender not found": {
     title: "O sender do WhatsApp informado não foi encontrado.",
   },
   "profile_name is required to provision a twilio whatsapp sender": {
-    title: "Informe um nome de perfil para provisionar o sender na Twilio.",
+    title: "Informe um nome de perfil para provisionar o sender na Meta.",
   },
   "message not found": {
     title: "A mensagem informada não foi encontrada.",

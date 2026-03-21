@@ -16,14 +16,14 @@ const PROVIDER_ACCOUNT: ProviderAccountItem = {
   id: "provider-1",
   tenant_id: "tenant-1",
   created_by_user_id: "user-1",
-  provider: "twilio",
+  provider: "meta",
   mode: "managed",
   status: "active",
   account_sid: "AC123",
   api_key_sid: "SK123",
   secret_ref: "secret-ref",
   configuration: {
-    friendly_name: "Basix Twilio",
+    friendly_name: "Basix Meta",
   },
   created_at: "2026-03-16T10:00:00Z",
   updated_at: "2026-03-16T10:00:00Z",
@@ -52,9 +52,7 @@ const WHATSAPP_SENDER: WhatsAppSenderItem = {
 
 describe("messaging format helpers", () => {
   it("uses provider friendly name when available", () => {
-    expect(getProviderAccountDisplayName(PROVIDER_ACCOUNT)).toBe(
-      "Basix Twilio",
-    );
+    expect(getProviderAccountDisplayName(PROVIDER_ACCOUNT)).toBe("Basix Meta");
   });
 
   it("formats provider and sender status labels", () => {

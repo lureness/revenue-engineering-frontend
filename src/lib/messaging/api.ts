@@ -4,9 +4,6 @@ import type {
   MessageFilters,
   MessageItem,
   ProviderAccountItem,
-  ProvisionTwilioSubaccountPayload,
-  ProvisionTwilioWhatsAppSenderPayload,
-  VerifyTwilioWhatsAppSenderPayload,
   WhatsAppSenderItem,
 } from "@/lib/messaging/types";
 
@@ -15,19 +12,6 @@ export async function getProviderAccounts() {
     method: "GET",
     cache: "no-store",
   });
-}
-
-export async function provisionTwilioSubaccount(
-  payload: ProvisionTwilioSubaccountPayload,
-) {
-  return apiRequest<ProviderAccountItem>(
-    "/provider-accounts/twilio/subaccount",
-    {
-      method: "POST",
-      body: payload,
-      cache: "no-store",
-    },
-  );
 }
 
 export async function getWhatsAppSenders() {
@@ -45,44 +29,6 @@ export async function createWhatsAppSender(
     body: payload,
     cache: "no-store",
   });
-}
-
-export async function provisionTwilioWhatsAppSender(
-  whatsappSenderId: string,
-  payload: ProvisionTwilioWhatsAppSenderPayload,
-) {
-  return apiRequest<WhatsAppSenderItem>(
-    `/whatsapp-senders/${whatsappSenderId}/twilio/provision`,
-    {
-      method: "POST",
-      body: payload,
-      cache: "no-store",
-    },
-  );
-}
-
-export async function verifyTwilioWhatsAppSender(
-  whatsappSenderId: string,
-  payload: VerifyTwilioWhatsAppSenderPayload,
-) {
-  return apiRequest<WhatsAppSenderItem>(
-    `/whatsapp-senders/${whatsappSenderId}/twilio/verify`,
-    {
-      method: "POST",
-      body: payload,
-      cache: "no-store",
-    },
-  );
-}
-
-export async function syncTwilioWhatsAppSender(whatsappSenderId: string) {
-  return apiRequest<WhatsAppSenderItem>(
-    `/whatsapp-senders/${whatsappSenderId}/twilio/sync`,
-    {
-      method: "POST",
-      cache: "no-store",
-    },
-  );
 }
 
 export async function getMessages(filters: MessageFilters = {}) {

@@ -1,4 +1,4 @@
-export type ProviderName = "twilio";
+export type ProviderName = "meta";
 export type ProviderMode = "managed" | "byo";
 export type ProviderStatus = "draft" | "active" | "inactive" | "error";
 
@@ -71,25 +71,12 @@ export type MessageItem = {
   updated_at: string;
 };
 
-export type ProvisionTwilioSubaccountPayload = {
-  friendly_name?: string;
-  api_key_friendly_name?: string;
-};
-
 export type CreateWhatsAppSenderPayload = {
   provider_account_id: string;
   phone_number: string;
   sender_id?: string;
   display_name?: string;
   is_default?: boolean;
-};
-
-export type ProvisionTwilioWhatsAppSenderPayload = {
-  profile_name: string;
-};
-
-export type VerifyTwilioWhatsAppSenderPayload = {
-  verification_code: string;
 };
 
 export type MessageFilters = {

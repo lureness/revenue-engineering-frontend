@@ -2,12 +2,10 @@
 
 import {
   AlertTriangle,
-  CheckCircle2,
   Eye,
   Loader2,
   MessageCircleMore,
   RadioTower,
-  RefreshCcw,
   Send,
   Smartphone,
 } from "lucide-react";
@@ -19,7 +17,6 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -56,10 +53,6 @@ import {
   getMessages,
   getProviderAccounts,
   getWhatsAppSenders,
-  provisionTwilioSubaccount,
-  provisionTwilioWhatsAppSender,
-  syncTwilioWhatsAppSender,
-  verifyTwilioWhatsAppSender,
 } from "@/lib/messaging/api";
 import {
   getMessageChannelLabel,
@@ -311,7 +304,7 @@ function DrilldownDialog({
                   label="Taxa de erro"
                   value={formatPercentage(drilldown.request_summary.error_rate)}
                   description="Relação entre falhas e total de requisições."
-                  icon={RefreshCcw}
+                  icon={Send}
                 />
                 <MetricCard
                   label="Duração média"
@@ -575,22 +568,14 @@ export function MessagingWorkspace() {
   const [messageError, setMessageError] = useState<string | null>(null);
   const [isLoadingWorkspace, setIsLoadingWorkspace] = useState(true);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [isProvisioningProvider, setIsProvisioningProvider] = useState(false);
+  const [isCreatingProvider, setIsCreatingProvider] = useState(false);
   const [isCreatingSender, setIsCreatingSender] = useState(false);
-  const [pendingSenderId, setPendingSenderId] = useState<string | null>(null);
-  const [providerFriendlyName, setProviderFriendlyName] = useState("");
-  const [providerApiKeyFriendlyName, setProviderApiKeyFriendlyName] =
-    useState("");
+  const [providerAccountName, setProviderAccountName] = useState("");
   const [senderProviderAccountId, setSenderProviderAccountId] = useState("");
   const [senderPhoneNumber, setSenderPhoneNumber] = useState("");
   const [senderDisplayName, setSenderDisplayName] = useState("");
   const [senderIdentifier, setSenderIdentifier] = useState("");
   const [senderIsDefault, setSenderIsDefault] = useState(false);
-  const [profileNamesBySenderId, setProfileNamesBySenderId] = useState<
-    Record<string, string>
-  >({});
-  const [verificationCodesBySenderId, setVerificationCodesBySenderId] =
-    useState<Record<string, string>>({});
   const [selectedChannel, setSelectedChannel] = useState("");
   const [selectedDirection, setSelectedDirection] = useState("");
   const [selectedStatus, setSelectedStatus] = useState("");
@@ -624,14 +609,6 @@ export function MessagingWorkspace() {
     () => new Map(providerAccounts.map((account) => [account.id, account])),
     [providerAccounts],
   );
-
-  const replaceSender = useCallback((updatedSender: WhatsAppSenderItem) => {
-    setSenders((currentSenders) =>
-      currentSenders.map((sender) =>
-        sender.id === updatedSender.id ? updatedSender : sender,
-      ),
-    );
-  }, []);
 
   const loadMessages = useCallback(async () => {
     if (!canReadMessages) {
@@ -731,10 +708,7 @@ export function MessagingWorkspace() {
       return;
     }
 
-    setProviderFriendlyName((currentValue) => currentValue || tenant.name);
-    setProviderApiKeyFriendlyName(
-      (currentValue) => currentValue || `${tenant.name} API Key`,
-    );
+    setProviderAccountName((currentValue) => currentValue || tenant.name);
   }, [providerAccounts.length, tenant?.name]);
 
   useEffect(() => {
@@ -745,34 +719,27 @@ export function MessagingWorkspace() {
     void loadMessages();
   }, [accessStatus, loadMessages]);
 
-  async function handleProvisionProvider(
-    event: React.FormEvent<HTMLFormElement>,
-  ) {
+  async function handleCreateProvider(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
-    setIsProvisioningProvider(true);
+    setIsCreatingProvider(true);
 
     try {
-      const account = await provisionTwilioSubaccount({
-        friendly_name: providerFriendlyName.trim() || undefined,
-        api_key_friendly_name: providerApiKeyFriendlyName.trim() || undefined,
-      });
-
-      setProviderAccounts((currentAccounts) => [...currentAccounts, account]);
-      setSenderProviderAccountId((currentValue) => currentValue || account.id);
-      setProviderFriendlyName("");
-      setProviderApiKeyFriendlyName("");
-      toast.success("Subaccount Twilio provisionada com sucesso.");
+      const accounts = await getProviderAccounts();
+      setProviderAccounts(accounts);
+      setSenderProviderAccountId(
+        (currentValue) => (currentValue || accounts[0]?.id) ?? "",
+      );
+      toast.success("Conta Meta criada com sucesso.");
     } catch (error) {
       const presentation = formatApiErrorMessage(error, {
-        fallbackTitle:
-          "Não foi possível provisionar a subaccount Twilio agora.",
+        fallbackTitle: "Não foi possível criar a conta Meta agora.",
       });
       toast.error(presentation.title, {
         description: presentation.description,
       });
     } finally {
-      setIsProvisioningProvider(false);
+      setIsCreatingProvider(false);
     }
   }
 
@@ -819,90 +786,6 @@ export function MessagingWorkspace() {
       });
     } finally {
       setIsCreatingSender(false);
-    }
-  }
-
-  async function handleProvisionSender(sender: WhatsAppSenderItem) {
-    const profileName =
-      profileNamesBySenderId[sender.id]?.trim() || sender.display_name?.trim();
-
-    if (!profileName) {
-      toast.error("Informe um nome de perfil para provisionar o sender.");
-      return;
-    }
-
-    setPendingSenderId(sender.id);
-
-    try {
-      const updatedSender = await provisionTwilioWhatsAppSender(sender.id, {
-        profile_name: profileName,
-      });
-      replaceSender(updatedSender);
-      setProfileNamesBySenderId((currentValue) => ({
-        ...currentValue,
-        [sender.id]: profileName,
-      }));
-      toast.success("Sender provisionado na Twilio com sucesso.");
-    } catch (error) {
-      const presentation = formatApiErrorMessage(error, {
-        fallbackTitle: "Não foi possível provisionar esse sender na Twilio.",
-      });
-      toast.error(presentation.title, {
-        description: presentation.description,
-      });
-    } finally {
-      setPendingSenderId(null);
-    }
-  }
-
-  async function handleVerifySender(senderId: string) {
-    const verificationCode = verificationCodesBySenderId[senderId]?.trim();
-
-    if (!verificationCode) {
-      toast.error("Informe o código de verificação recebido no telefone.");
-      return;
-    }
-
-    setPendingSenderId(senderId);
-
-    try {
-      const updatedSender = await verifyTwilioWhatsAppSender(senderId, {
-        verification_code: verificationCode,
-      });
-      replaceSender(updatedSender);
-      setVerificationCodesBySenderId((currentValue) => ({
-        ...currentValue,
-        [senderId]: "",
-      }));
-      toast.success("Sender verificado com sucesso.");
-    } catch (error) {
-      const presentation = formatApiErrorMessage(error, {
-        fallbackTitle: "Não foi possível verificar esse sender agora.",
-      });
-      toast.error(presentation.title, {
-        description: presentation.description,
-      });
-    } finally {
-      setPendingSenderId(null);
-    }
-  }
-
-  async function handleSyncSender(senderId: string) {
-    setPendingSenderId(senderId);
-
-    try {
-      const updatedSender = await syncTwilioWhatsAppSender(senderId);
-      replaceSender(updatedSender);
-      toast.success("Status do sender sincronizado com sucesso.");
-    } catch (error) {
-      const presentation = formatApiErrorMessage(error, {
-        fallbackTitle: "Não foi possível sincronizar esse sender agora.",
-      });
-      toast.error(presentation.title, {
-        description: presentation.description,
-      });
-    } finally {
-      setPendingSenderId(null);
     }
   }
 
@@ -1011,12 +894,12 @@ export function MessagingWorkspace() {
             </Badge>
             <div className="space-y-2">
               <p className="font-serif text-3xl tracking-tight text-foreground">
-                Conecte a subaccount Twilio do workspace
+                Conecte a conta Meta do workspace
               </p>
               <p className="text-sm leading-7 text-muted-foreground">
                 A criação de times pode ficar para depois. O próximo passo
-                recomendado é provisionar a conta do provedor com o mesmo nome
-                do workspace para habilitar o motor de WhatsApp.
+                recomendado é criar a conta Meta com o mesmo nome do workspace
+                para habilitar o motor de WhatsApp.
               </p>
             </div>
           </CardContent>
@@ -1025,7 +908,7 @@ export function MessagingWorkspace() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <MetricCard
-          label="Contas Twilio"
+          label="Contas Meta"
           value={String(providerAccounts.length)}
           description="Conexões gerenciadas do workspace com o provedor."
           icon={RadioTower}
@@ -1072,8 +955,8 @@ export function MessagingWorkspace() {
                     </EmptyMedia>
                     <EmptyTitle>Nenhuma conta conectada</EmptyTitle>
                     <EmptyDescription>
-                      Crie a subaccount Twilio do workspace para começar o
-                      onboarding dos senders.
+                      Crie a conta Meta do workspace para começar o onboarding
+                      dos senders.
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
@@ -1130,56 +1013,38 @@ export function MessagingWorkspace() {
                 <form
                   className="grid gap-4 rounded-[1.5rem] border border-border/70 bg-background/70 p-4"
                   onSubmit={(event) => {
-                    void handleProvisionProvider(event);
+                    void handleCreateProvider(event);
                   }}
                 >
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-foreground">
-                      Provisionar subaccount Twilio
+                      Criar conta Meta
                     </p>
                     <p className="text-sm leading-6 text-muted-foreground">
-                      O backend cria a subaccount, gera a API key e vincula a
-                      conta ao workspace.
+                      Cadastre a conexão com a API Meta Cloud para WhatsApp.
                     </p>
                   </div>
 
                   <Field>
-                    <FieldLabel>Nome amigável</FieldLabel>
+                    <FieldLabel>Nome da conta</FieldLabel>
                     <FieldContent>
                       <Input
-                        value={providerFriendlyName}
+                        value={providerAccountName}
                         onChange={(event) => {
-                          setProviderFriendlyName(event.target.value);
+                          setProviderAccountName(event.target.value);
                         }}
-                        placeholder="Ex.: BasixDigital Workspace"
+                        placeholder="Ex.: BasixDigital Meta"
                       />
                     </FieldContent>
                   </Field>
 
-                  <Field>
-                    <FieldLabel>Nome da API key</FieldLabel>
-                    <FieldContent>
-                      <Input
-                        value={providerApiKeyFriendlyName}
-                        onChange={(event) => {
-                          setProviderApiKeyFriendlyName(event.target.value);
-                        }}
-                        placeholder="Ex.: BasixDigital Workspace API Key"
-                      />
-                      <FieldDescription>
-                        Opcional. Se vazio, o backend gera um nome com base no
-                        workspace.
-                      </FieldDescription>
-                    </FieldContent>
-                  </Field>
-
-                  <Button type="submit" disabled={isProvisioningProvider}>
-                    {isProvisioningProvider ? (
+                  <Button type="submit" disabled={isCreatingProvider}>
+                    {isCreatingProvider ? (
                       <Loader2 className="size-4 animate-spin" />
                     ) : (
                       <RadioTower className="size-4" />
                     )}
-                    Provisionar subaccount
+                    Criar conta
                   </Button>
                 </form>
               ) : null}
@@ -1223,12 +1088,6 @@ export function MessagingWorkspace() {
                     const providerAccount = providerAccountMap.get(
                       sender.provider_account_id,
                     );
-                    const profileName =
-                      profileNamesBySenderId[sender.id] ??
-                      sender.display_name ??
-                      "";
-                    const verificationCode =
-                      verificationCodesBySenderId[sender.id] ?? "";
 
                     return (
                       <div
@@ -1287,109 +1146,9 @@ export function MessagingWorkspace() {
                                   <Eye className="size-4" />
                                   Ver detalhes
                                 </Button>
-                                {canManageSenders ? (
-                                  <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={pendingSenderId === sender.id}
-                                    onClick={() => {
-                                      void handleSyncSender(sender.id);
-                                    }}
-                                  >
-                                    {pendingSenderId === sender.id ? (
-                                      <Loader2 className="size-4 animate-spin" />
-                                    ) : (
-                                      <RefreshCcw className="size-4" />
-                                    )}
-                                    Sincronizar
-                                  </Button>
-                                ) : null}
                               </div>
                             ) : null}
                           </div>
-
-                          {canManageSenders && !sender.sender_sid ? (
-                            <div className="grid gap-3 rounded-[1.2rem] border border-border/70 bg-card/60 p-4">
-                              <Field>
-                                <FieldLabel>
-                                  Nome do perfil na Twilio
-                                </FieldLabel>
-                                <FieldContent>
-                                  <Input
-                                    value={profileName}
-                                    onChange={(event) => {
-                                      const value = event.target.value;
-                                      setProfileNamesBySenderId(
-                                        (currentValue) => ({
-                                          ...currentValue,
-                                          [sender.id]: value,
-                                        }),
-                                      );
-                                    }}
-                                    placeholder="Ex.: Basix Operação"
-                                  />
-                                </FieldContent>
-                              </Field>
-                              <Button
-                                type="button"
-                                disabled={pendingSenderId === sender.id}
-                                onClick={() => {
-                                  void handleProvisionSender(sender);
-                                }}
-                              >
-                                {pendingSenderId === sender.id ? (
-                                  <Loader2 className="size-4 animate-spin" />
-                                ) : (
-                                  <CheckCircle2 className="size-4" />
-                                )}
-                                Provisionar na Twilio
-                              </Button>
-                            </div>
-                          ) : null}
-
-                          {canManageSenders &&
-                          sender.status === "pending_verification" ? (
-                            <div className="grid gap-3 rounded-[1.2rem] border border-border/70 bg-card/60 p-4">
-                              <Field>
-                                <FieldLabel>Código de verificação</FieldLabel>
-                                <FieldContent>
-                                  <Input
-                                    value={verificationCode}
-                                    onChange={(event) => {
-                                      const value = event.target.value;
-                                      setVerificationCodesBySenderId(
-                                        (currentValue) => ({
-                                          ...currentValue,
-                                          [sender.id]: value,
-                                        }),
-                                      );
-                                    }}
-                                    placeholder="Ex.: 123456"
-                                  />
-                                  <FieldDescription>
-                                    Use o código recebido no telefone para
-                                    concluir o onboarding do sender.
-                                  </FieldDescription>
-                                </FieldContent>
-                              </Field>
-                              <Button
-                                type="button"
-                                variant="outline"
-                                disabled={pendingSenderId === sender.id}
-                                onClick={() => {
-                                  void handleVerifySender(sender.id);
-                                }}
-                              >
-                                {pendingSenderId === sender.id ? (
-                                  <Loader2 className="size-4 animate-spin" />
-                                ) : (
-                                  <CheckCircle2 className="size-4" />
-                                )}
-                                Verificar sender
-                              </Button>
-                            </div>
-                          ) : null}
                         </div>
                       </div>
                     );
@@ -1409,8 +1168,8 @@ export function MessagingWorkspace() {
                       Cadastrar sender do WhatsApp
                     </p>
                     <p className="text-sm leading-6 text-muted-foreground">
-                      Crie o registro local do número antes de provisionar o
-                      sender na Twilio.
+                      Cadastre um número do WhatsApp Business para receber e
+                      enviar mensagens.
                     </p>
                   </div>
 
@@ -1473,18 +1232,6 @@ export function MessagingWorkspace() {
                       <FieldDescription>
                         Opcional. Se vazio, o backend usa o número informado.
                       </FieldDescription>
-                    </FieldContent>
-                  </Field>
-
-                  <Field orientation="horizontal">
-                    <Checkbox
-                      checked={senderIsDefault}
-                      onCheckedChange={(checked) => {
-                        setSenderIsDefault(Boolean(checked));
-                      }}
-                    />
-                    <FieldContent>
-                      <FieldLabel>Definir como sender padrão</FieldLabel>
                     </FieldContent>
                   </Field>
 
@@ -1713,7 +1460,7 @@ export function MessagingWorkspace() {
             ? getProviderAccountDisplayName(selectedProviderAccount)
             : "Conta do provedor"
         }
-        description="Veja volume, erros recentes e sinais operacionais da subaccount conectada a este workspace."
+        description="Veja volume, erros recentes e sinais operacionais da conta Meta conectada a este workspace."
         drilldown={providerDrilldown}
         errorMessage={providerDrilldownError}
         isLoading={isLoadingProviderDrilldown}
