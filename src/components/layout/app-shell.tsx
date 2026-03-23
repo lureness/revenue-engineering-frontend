@@ -3,7 +3,9 @@
 import {
   Activity,
   BookUser,
+  ChevronDown,
   ChevronRight,
+  ChevronUp,
   FileText,
   Inbox,
   Layers3,
@@ -61,69 +63,100 @@ import {
 } from "@/lib/rbac/permissions";
 import { cn } from "@/lib/utils";
 
-type NavigationItem = {
+type NavItem = {
   title: string;
-  getHref: (slug: string) => string;
+  href: string;
   icon: typeof Layers3;
   match: "exact" | "prefix";
+  permission?: string;
 };
 
-const navigationItems: NavigationItem[] = [
-  {
-    title: "Dashboard",
-    getHref: (slug) => `/workspace/${slug}`,
-    icon: Layers3,
+type NavGroup = {
+  title?: string;
+  items: NavItem[];
+};
 
-    match: "exact",
+const navigationGroups: NavGroup[] = [
+  {
+    items: [
+      {
+        title: "Dashboard",
+        href: "/workspace/[slug]",
+        icon: Layers3,
+        match: "exact",
+        permission: TENANT_METRICS_READ_PERMISSION,
+      },
+    ],
   },
   {
-    title: "Inbox",
-    getHref: (slug) => `/workspace/${slug}/inbox`,
-    icon: Inbox,
-
-    match: "prefix",
+    title: "Operações",
+    items: [
+      {
+        title: "Inbox",
+        href: "/workspace/[slug]/inbox",
+        icon: Inbox,
+        match: "prefix",
+        permission: TENANT_CONVERSATIONS_READ_PERMISSION,
+      },
+      {
+        title: "Contatos",
+        href: "/workspace/[slug]/inbox/contacts",
+        icon: BookUser,
+        match: "prefix",
+        permission:
+          TENANT_CONTACTS_READ_PERMISSION || TENANT_CONTACTS_MANAGE_PERMISSION,
+      },
+      {
+        title: "Mensageria",
+        href: "/workspace/[slug]/inbox/messages",
+        icon: MessageCircleMore,
+        match: "prefix",
+        permission:
+          TENANT_MESSAGES_READ_PERMISSION ||
+          TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION ||
+          TENANT_WHATSAPP_SENDERS_READ_PERMISSION,
+      },
+    ],
   },
   {
-    title: "Times",
-    getHref: (slug) => `/workspace/${slug}/teams`,
-    icon: UsersRound,
-
-    match: "prefix",
+    items: [
+      {
+        title: "Times",
+        href: "/workspace/[slug]/teams",
+        icon: UsersRound,
+        match: "prefix",
+      },
+      {
+        title: "Surveys",
+        href: "/workspace/[slug]/surveys",
+        icon: FileText,
+        match: "prefix",
+        permission:
+          TENANT_SURVEYS_READ_PERMISSION || TENANT_SURVEYS_MANAGE_PERMISSION,
+      },
+    ],
   },
   {
-    title: "Contatos",
-    getHref: (slug) => `/workspace/${slug}/inbox/contacts`,
-    icon: BookUser,
-
-    match: "prefix",
-  },
-  {
-    title: "Surveys",
-    getHref: (slug) => `/workspace/${slug}/surveys`,
-    icon: FileText,
-
-    match: "prefix",
-  },
-  {
-    title: "Mensageria",
-    getHref: (slug) => `/workspace/${slug}/inbox/messages`,
-    icon: MessageCircleMore,
-
-    match: "prefix",
-  },
-  {
-    title: "Observabilidade",
-    getHref: (slug) => `/workspace/${slug}/settings/observability`,
-    icon: Activity,
-
-    match: "prefix",
-  },
-  {
-    title: "RBAC",
-    getHref: (slug) => `/workspace/${slug}/settings/rbac`,
-    icon: ShieldCheck,
-
-    match: "exact",
+    title: "Configurações",
+    items: [
+      {
+        title: "Observabilidade",
+        href: "/workspace/[slug]/settings/observability",
+        icon: Activity,
+        match: "prefix",
+        permission:
+          TENANT_METRICS_READ_PERMISSION || TENANT_AUDIT_LOGS_READ_PERMISSION,
+      },
+      {
+        title: "RBAC",
+        href: "/workspace/[slug]/settings/rbac",
+        icon: ShieldCheck,
+        match: "exact",
+        permission:
+          TENANT_MEMBERS_READ_PERMISSION ||
+          TENANT_PERMISSIONS_MANAGE_PERMISSION,
+      },
+    ],
   },
 ];
 
@@ -225,18 +258,138 @@ function getUserInitials(userEmail?: string) {
   return localPart.slice(0, 2).toUpperCase() || "U";
 }
 
-function isNavigationItemActive(
-  pathname: string,
-  item: NavigationItem,
-  slug: string,
-) {
-  const href = item.getHref(slug);
+function isNavItemActive(pathname: string, item: NavItem, slug: string) {
+  const href = item.href.replace("[slug]", slug);
 
   if (item.match === "exact") {
     return pathname === href;
   }
 
   return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NavItemComponent({
+  item,
+  slug,
+  collapsed,
+  pathname,
+  isLocked,
+}: {
+  item: NavItem;
+  slug: string;
+  collapsed: boolean;
+  pathname: string;
+  isLocked: boolean;
+}) {
+  const Icon = item.icon;
+  const href = item.href.replace("[slug]", slug);
+  const isActive = isNavItemActive(pathname, item, slug);
+
+  const itemClassName = cn(
+    "flex rounded-xl transition-colors",
+    collapsed
+      ? "size-10 items-center justify-center"
+      : "items-center gap-3 px-3 py-2.5",
+    isActive
+      ? "bg-foreground text-background"
+      : "text-foreground hover:bg-foreground/10",
+    isLocked && "opacity-50",
+  );
+
+  if (collapsed) {
+    return (
+      <Link
+        href={href}
+        className={itemClassName}
+        title={isLocked ? `${item.title} · restrito` : item.title}
+        aria-label={item.title}
+      >
+        <Icon className="size-4 shrink-0" />
+      </Link>
+    );
+  }
+
+  return (
+    <Link href={href} className={itemClassName}>
+      <Icon className="size-4 shrink-0" />
+      <span className="flex-1 text-sm font-medium">{item.title}</span>
+      {isLocked && <Lock className="size-3.5 text-muted-foreground" />}
+    </Link>
+  );
+}
+
+function NavGroupComponent({
+  group,
+  slug,
+  collapsed,
+  pathname,
+  hasPermission,
+}: {
+  group: NavGroup;
+  slug: string;
+  collapsed: boolean;
+  pathname: string;
+  hasPermission: (permission?: string) => boolean;
+}) {
+  const [isExpanded, setIsExpanded] = useState(() => {
+    return group.items.some((item) => isNavItemActive(pathname, item, slug));
+  });
+
+  const visibleItems = group.items.filter(
+    (item) => !item.permission || hasPermission(item.permission),
+  );
+
+  if (visibleItems.length === 0) return null;
+
+  if (collapsed) {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        {visibleItems.map((item) => (
+          <NavItemComponent
+            key={item.href}
+            item={item}
+            slug={slug}
+            collapsed={collapsed}
+            pathname={pathname}
+            isLocked={false}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-1">
+      {group.title && (
+        <button
+          type="button"
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium uppercase tracking-wider text-muted-foreground hover:text-foreground"
+        >
+          <span>{group.title}</span>
+          {isExpanded ? (
+            <ChevronUp className="size-3.5" />
+          ) : (
+            <ChevronDown className="size-3.5" />
+          )}
+        </button>
+      )}
+      {(!group.title || isExpanded) && (
+        <div className={cn("flex flex-col gap-1", group.title ? "" : "")}>
+          {visibleItems.map((item) => (
+            <NavItemComponent
+              key={item.href}
+              item={item}
+              slug={slug}
+              collapsed={collapsed}
+              pathname={pathname}
+              isLocked={false}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function SidebarContent({
@@ -254,59 +407,11 @@ function SidebarContent({
   const pathname = usePathname();
   const { hasTenantPermission, status: accessStatus } = useAccess();
 
-  function isNavigationItemLocked(item: NavigationItem) {
-    if (accessStatus !== "ready") {
-      return false;
-    }
-
-    const href = item.getHref(tenantSlug);
-
-    if (href === `/workspace/${tenantSlug}`) {
-      return !hasTenantPermission(TENANT_METRICS_READ_PERMISSION);
-    }
-
-    if (href === `/workspace/${tenantSlug}/settings/rbac`) {
-      return !(
-        hasTenantPermission(TENANT_MEMBERS_READ_PERMISSION) ||
-        hasTenantPermission(TENANT_PERMISSIONS_MANAGE_PERMISSION)
-      );
-    }
-
-    if (item.title === "Mensageria") {
-      return !(
-        hasTenantPermission(TENANT_MESSAGES_READ_PERMISSION) ||
-        hasTenantPermission(TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION) ||
-        hasTenantPermission(TENANT_WHATSAPP_SENDERS_READ_PERMISSION)
-      );
-    }
-
-    if (item.title === "Contatos") {
-      return !(
-        hasTenantPermission(TENANT_CONTACTS_READ_PERMISSION) ||
-        hasTenantPermission(TENANT_CONTACTS_MANAGE_PERMISSION)
-      );
-    }
-
-    if (item.title === "Surveys") {
-      return !(
-        hasTenantPermission(TENANT_SURVEYS_READ_PERMISSION) ||
-        hasTenantPermission(TENANT_SURVEYS_MANAGE_PERMISSION)
-      );
-    }
-
-    if (item.title === "Inbox") {
-      return !hasTenantPermission(TENANT_CONVERSATIONS_READ_PERMISSION);
-    }
-
-    if (item.title === "Observabilidade") {
-      return !(
-        hasTenantPermission(TENANT_METRICS_READ_PERMISSION) ||
-        hasTenantPermission(TENANT_AUDIT_LOGS_READ_PERMISSION)
-      );
-    }
-
-    return false;
-  }
+  const hasPermission = (permission?: string) => {
+    if (accessStatus !== "ready") return true;
+    if (!permission) return true;
+    return hasTenantPermission(permission);
+  };
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -335,104 +440,21 @@ function SidebarContent({
       )}
 
       <nav
-        className={cn("grid gap-2", collapsed ? "justify-center" : undefined)}
+        className={cn(
+          "flex flex-col gap-6",
+          collapsed ? "items-center" : undefined,
+        )}
       >
-        {navigationItems.map((item) => {
-          const Icon = item.icon;
-          const href = item.getHref(tenantSlug);
-          const isNavigable = href.startsWith("/");
-          const isActive = isNavigationItemActive(pathname, item, tenantSlug);
-          const isLocked = isNavigationItemLocked(item);
-          const itemClassName = cn(
-            "flex rounded-2xl border transition-colors",
-            collapsed
-              ? "size-12 items-center justify-center"
-              : "items-center justify-between px-4 py-3",
-            isActive
-              ? "border-foreground/10 bg-foreground text-background shadow-sm"
-              : "border-transparent bg-transparent text-foreground hover:border-border/70 hover:text-primary",
-          );
-          const iconNode = <Icon className="size-4 shrink-0" />;
-
-          if (collapsed) {
-            const collapsedIcon = (
-              <span className="relative inline-flex items-center justify-center">
-                {iconNode}
-                {isLocked ? (
-                  <span
-                    className={cn(
-                      "absolute -right-1 -bottom-1 inline-flex size-4 items-center justify-center rounded-full border",
-                      isActive
-                        ? "border-foreground/20 bg-background text-foreground"
-                        : "border-border/70 bg-background text-muted-foreground",
-                    )}
-                  >
-                    <Lock className="size-2.5" />
-                  </span>
-                ) : null}
-              </span>
-            );
-
-            if (!isNavigable) {
-              return (
-                <div
-                  key={item.title}
-                  className={itemClassName}
-                  title={isLocked ? `${item.title} · restrito` : item.title}
-                >
-                  {collapsedIcon}
-                </div>
-              );
-            }
-
-            return (
-              <Link
-                key={item.title}
-                href={href}
-                className={itemClassName}
-                title={isLocked ? `${item.title} · restrito` : item.title}
-                aria-label={item.title}
-              >
-                {collapsedIcon}
-              </Link>
-            );
-          }
-
-          const content = (
-            <>
-              <span className="flex items-center gap-3">
-                {iconNode}
-                <span className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{item.title}</span>
-                  {isLocked ? (
-                    <Lock
-                      className={cn(
-                        "size-3.5",
-                        isActive
-                          ? "text-background/80"
-                          : "text-muted-foreground",
-                      )}
-                    />
-                  ) : null}
-                </span>
-              </span>
-            </>
-          );
-
-          if (!isNavigable) {
-            return (
-              <div key={item.title} className={itemClassName}>
-                {content}
-              </div>
-            );
-          }
-
-          return (
-            <Link key={item.title} href={href} className={itemClassName}>
-              {content}
-            </Link>
-          );
-        })}
+        {navigationGroups.map((group) => (
+          <NavGroupComponent
+            key={group.title ?? "main"}
+            group={group}
+            slug={tenantSlug}
+            collapsed={collapsed}
+            pathname={pathname}
+            hasPermission={hasPermission}
+          />
+        ))}
       </nav>
 
       {collapsed ? (
