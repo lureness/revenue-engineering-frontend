@@ -107,7 +107,7 @@ const navigationGroups: NavGroup[] = [
           TENANT_CONTACTS_READ_PERMISSION || TENANT_CONTACTS_MANAGE_PERMISSION,
       },
       {
-        title: "Mensageria",
+        title: "Mensagens",
         href: "/workspace/[slug]/inbox/messages",
         icon: MessageCircleMore,
         match: "prefix",
@@ -198,10 +198,10 @@ const pageContentMap: Record<
       "Centralize o histórico por contato, distribua a operação e responda no canal certo.",
   },
   "/workspace/[slug]/inbox/messages": {
-    eyebrow: "Mensageria",
-    title: "Operação de mensagens",
+    eyebrow: "Mensagens",
+    title: "Histórico de mensagens",
     description:
-      "Conecte provedores, acompanhe senders do WhatsApp e revise o histórico de mensagens.",
+      "Acompanhe todas as mensagens enviadas e recebidas via WhatsApp, email e SMS.",
   },
   "/workspace/[slug]/settings/observability": {
     eyebrow: "Observabilidade",
@@ -274,12 +274,14 @@ function NavItemComponent({
   collapsed,
   pathname,
   isLocked,
+  isChild = false,
 }: {
   item: NavItem;
   slug: string;
   collapsed: boolean;
   pathname: string;
   isLocked: boolean;
+  isChild?: boolean;
 }) {
   const Icon = item.icon;
   const href = item.href.replace("[slug]", slug);
@@ -290,9 +292,11 @@ function NavItemComponent({
     collapsed
       ? "size-10 items-center justify-center"
       : "items-center gap-3 px-3 py-2.5",
-    isActive
+    isActive && !isChild
       ? "bg-foreground text-background"
-      : "text-foreground hover:bg-foreground/10",
+      : isActive && isChild
+        ? "bg-foreground/20 text-foreground font-medium"
+        : "text-foreground hover:bg-foreground/10",
     isLocked && "opacity-50",
   );
 
@@ -384,6 +388,7 @@ function NavGroupComponent({
               collapsed={collapsed}
               pathname={pathname}
               isLocked={false}
+              isChild={!!group.title}
             />
           ))}
         </div>
