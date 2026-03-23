@@ -25,7 +25,6 @@ import { useAccess } from "@/components/access/access-provider";
 import { LurenessMark } from "@/components/brand/lureness-mark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -66,7 +65,6 @@ type NavigationItem = {
   title: string;
   getHref: (slug: string) => string;
   icon: typeof Layers3;
-  status: string;
   match: "exact" | "prefix";
 };
 
@@ -75,56 +73,56 @@ const navigationItems: NavigationItem[] = [
     title: "Dashboard",
     getHref: (slug) => `/workspace/${slug}`,
     icon: Layers3,
-    status: "ativo",
+
     match: "exact",
   },
   {
     title: "Inbox",
     getHref: (slug) => `/workspace/${slug}/inbox`,
     icon: Inbox,
-    status: "ativo",
+
     match: "prefix",
   },
   {
     title: "Times",
     getHref: (slug) => `/workspace/${slug}/teams`,
     icon: UsersRound,
-    status: "ativo",
+
     match: "prefix",
   },
   {
     title: "Contatos",
     getHref: (slug) => `/workspace/${slug}/inbox/contacts`,
     icon: BookUser,
-    status: "ativo",
+
     match: "prefix",
   },
   {
     title: "Surveys",
     getHref: (slug) => `/workspace/${slug}/surveys`,
     icon: FileText,
-    status: "ativo",
+
     match: "prefix",
   },
   {
     title: "Mensageria",
     getHref: (slug) => `/workspace/${slug}/inbox/messages`,
     icon: MessageCircleMore,
-    status: "ativo",
+
     match: "prefix",
   },
   {
     title: "Observabilidade",
     getHref: (slug) => `/workspace/${slug}/settings/observability`,
     icon: Activity,
-    status: "ativo",
+
     match: "prefix",
   },
   {
     title: "RBAC",
     getHref: (slug) => `/workspace/${slug}/settings/rbac`,
     icon: ShieldCheck,
-    status: "ativo",
+
     match: "exact",
   },
 ];
@@ -418,11 +416,6 @@ function SidebarContent({
                   ) : null}
                 </span>
               </span>
-              {isActive ? (
-                <span className="pointer-events-none">
-                  <Badge variant="secondary">{item.status}</Badge>
-                </span>
-              ) : null}
             </>
           );
 
