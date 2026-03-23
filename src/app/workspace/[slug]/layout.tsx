@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 
 import { ProtectedWorkspaceShell } from "@/components/auth/protected-workspace-shell";
+import { WorkspaceChatLayout } from "@/components/workspace/workspace-chat-layout";
 
 type WorkspaceLayoutProps = {
   children: ReactNode;
@@ -16,7 +17,7 @@ export default async function WorkspaceLayout({
   const { slug } = await params;
   return (
     <ProtectedWorkspaceShell tenantSlug={slug}>
-      {children}
+      <WorkspaceChatLayout>{children}</WorkspaceChatLayout>
     </ProtectedWorkspaceShell>
   );
 }
