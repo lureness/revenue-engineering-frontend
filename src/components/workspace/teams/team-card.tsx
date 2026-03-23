@@ -74,11 +74,13 @@ export function TeamCard({ team, onDeleted }: TeamCardProps) {
             onInvited={loadData}
           />
           <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button variant="ghost" size="icon-sm">
-                <MoreHorizontal className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="ghost" size="icon-sm">
+                  <MoreHorizontal className="size-4" />
+                </Button>
+              }
+            />
             <DropdownMenuContent align="end">
               <DropdownMenuItem variant="destructive" onClick={onDeleted}>
                 <Trash2 className="size-4" />

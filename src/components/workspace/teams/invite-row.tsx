@@ -113,11 +113,13 @@ export function InviteRow({
         </span>
         {!isAccepted && !isRevoked && (
           <DropdownMenu>
-            <DropdownMenuTrigger>
-              <Button variant="ghost" size="icon-sm">
-                <EllipsisVertical className="size-4" />
-              </Button>
-            </DropdownMenuTrigger>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="ghost" size="icon-sm">
+                  <EllipsisVertical className="size-4" />
+                </Button>
+              }
+            />
             <DropdownMenuContent align="end">
               <DropdownMenuItem disabled={isLoading} onClick={handleResend}>
                 <RefreshCcw className="size-4" />

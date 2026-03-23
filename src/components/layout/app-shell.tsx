@@ -446,15 +446,18 @@ function SidebarContent({
                   className="size-12 rounded-2xl p-0"
                   aria-label="Abrir menu da conta"
                   title="Abrir menu da conta"
-                />
+                >
+                  <Avatar
+                    size="sm"
+                    className="pointer-events-none after:hidden"
+                  >
+                    <AvatarFallback className="bg-foreground text-xs font-medium text-background">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
               }
-            >
-              <Avatar size="sm" className="pointer-events-none after:hidden">
-                <AvatarFallback className="bg-foreground text-xs font-medium text-background">
-                  {userInitials}
-                </AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
+            />
             <DropdownMenuContent
               side="right"
               align="center"

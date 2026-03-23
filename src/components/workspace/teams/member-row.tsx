@@ -96,11 +96,13 @@ export function MemberRow({
           </SelectContent>
         </Select>
         <DropdownMenu>
-          <DropdownMenuTrigger>
-            <Button variant="ghost" size="icon-sm">
-              <MoreHorizontal className="size-4" />
-            </Button>
-          </DropdownMenuTrigger>
+          <DropdownMenuTrigger
+            render={
+              <Button variant="ghost" size="icon-sm">
+                <MoreHorizontal className="size-4" />
+              </Button>
+            }
+          />
           <DropdownMenuContent align="end">
             <DropdownMenuItem
               variant="destructive"
