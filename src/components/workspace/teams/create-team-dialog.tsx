@@ -52,14 +52,16 @@ export function CreateTeamDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children ?? (
-          <Button>
-            <Plus className="size-4" />
-            Novo time
-          </Button>
-        )}
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          children ?? (
+            <Button>
+              <Plus className="size-4" />
+              Novo time
+            </Button>
+          )
+        }
+      />
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
