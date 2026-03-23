@@ -21,7 +21,7 @@ import type { TeamItem } from "@/lib/teams/types";
 
 type CreateTeamDialogProps = {
   onCreated?: (team: TeamItem) => void;
-  children?: React.ReactNode;
+  children?: React.ReactElement;
 };
 
 export function CreateTeamDialog({
@@ -50,18 +50,16 @@ export function CreateTeamDialog({
     }
   };
 
+  const trigger = children ?? (
+    <Button>
+      <Plus className="size-4" />
+      Novo time
+    </Button>
+  );
+
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger
-        render={
-          children ?? (
-            <Button>
-              <Plus className="size-4" />
-              Novo time
-            </Button>
-          )
-        }
-      />
+      <DialogTrigger render={trigger} />
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
