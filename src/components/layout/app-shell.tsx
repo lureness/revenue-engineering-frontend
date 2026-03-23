@@ -62,122 +62,133 @@ import {
 } from "@/lib/rbac/permissions";
 import { cn } from "@/lib/utils";
 
-const navigationItems = [
+type NavigationItem = {
+  title: string;
+  getHref: (slug: string) => string;
+  icon: typeof Layers3;
+  status: string;
+  match: "exact" | "prefix";
+};
+
+const navigationItems: NavigationItem[] = [
   {
     title: "Dashboard",
-    href: "/app",
+    getHref: (slug) => `/workspace/${slug}`,
     icon: Layers3,
     status: "ativo",
     match: "exact",
   },
   {
     title: "Inbox",
-    href: "/app/inbox",
+    getHref: (slug) => `/workspace/${slug}/inbox`,
     icon: Inbox,
     status: "ativo",
     match: "prefix",
   },
   {
     title: "Times",
-    href: "/app/teams",
+    getHref: (slug) => `/workspace/${slug}/teams`,
     icon: UsersRound,
     status: "ativo",
     match: "prefix",
   },
   {
     title: "Contatos",
-    href: "/app/contacts",
+    getHref: (slug) => `/workspace/${slug}/inbox/contacts`,
     icon: BookUser,
     status: "ativo",
     match: "prefix",
   },
   {
     title: "Surveys",
-    href: "/app/surveys",
+    getHref: (slug) => `/workspace/${slug}/surveys`,
     icon: FileText,
     status: "ativo",
     match: "prefix",
   },
   {
     title: "Mensageria",
-    href: "/app/messaging",
+    getHref: (slug) => `/workspace/${slug}/inbox/messages`,
     icon: MessageCircleMore,
     status: "ativo",
     match: "prefix",
   },
   {
     title: "Observabilidade",
-    href: "/app/observability",
+    getHref: (slug) => `/workspace/${slug}/settings/observability`,
     icon: Activity,
     status: "ativo",
     match: "prefix",
   },
   {
     title: "RBAC",
-    href: "/app/rbac",
+    getHref: (slug) => `/workspace/${slug}/settings/rbac`,
     icon: ShieldCheck,
     status: "ativo",
     match: "exact",
   },
-] as const;
+];
 
-const pageContentMap = {
-  "/app": {
+const pageContentMap: Record<
+  string,
+  { eyebrow: string; title: string; description: string }
+> = {
+  "/workspace/[slug]": {
     eyebrow: "Dashboard",
-    title: "Observabilidade do workspace",
-    description:
-      "Acompanhe tráfego, saúde operacional e sinais do produto a partir das métricas da API.",
+    title: "Dashboard do workspace",
+    description: "Visão geral das métricas e indicadores do seu workspace.",
   },
-  "/app/user": {
+  "/workspace/[slug]/settings/account": {
     eyebrow: "Usuário",
     title: "Conta e preferências",
     description: "Gerencie a senha e os ajustes da sua conta autenticada.",
   },
-  "/app/teams": {
+  "/workspace/[slug]/teams": {
     eyebrow: "Times",
     title: "Gestão de times",
     description: "Crie times, acompanhe membros e administre invites ativos.",
   },
-  "/app/contacts": {
+  "/workspace/[slug]/inbox/contacts": {
     eyebrow: "Contatos",
     title: "Base de contatos do workspace",
     description:
       "Construa a audiência que vai sustentar conversas, inbox, automações e futuras ações de CRM.",
   },
-  "/app/surveys": {
+  "/workspace/[slug]/surveys": {
     eyebrow: "Surveys",
     title: "Diagnósticos públicos e captação",
     description:
       "Instale templates, publique quizzes e transforme tráfego em lead qualificado com contexto para o inbox.",
   },
-  "/app/inbox": {
+  "/workspace/[slug]/inbox": {
     eyebrow: "Inbox",
     title: "Operação de conversas",
     description:
       "Centralize o histórico por contato, distribua a operação e responda no canal certo.",
   },
-  "/app/messaging": {
+  "/workspace/[slug]/inbox/messages": {
     eyebrow: "Mensageria",
     title: "Operação de mensagens",
     description:
       "Conecte provedores, acompanhe senders do WhatsApp e revise o histórico de mensagens.",
   },
-  "/app/observability": {
+  "/workspace/[slug]/settings/observability": {
     eyebrow: "Observabilidade",
     title: "Drilldowns e saúde operacional",
     description:
       "Explore métricas, erros e atividade por entidade para investigar a operação do workspace.",
   },
-  "/app/rbac": {
+  "/workspace/[slug]/settings/rbac": {
     eyebrow: "RBAC",
     title: "Governança de acesso",
     description:
       "Administre roles globais, grants diretos e permissões efetivas do workspace.",
   },
-} as const;
+};
 
 type AppShellProps = {
   children: ReactNode;
+  tenantSlug?: string;
   tenantName?: string;
   userEmail?: string;
   userRole?: string;
@@ -189,6 +200,7 @@ type SidebarContentProps = {
   collapsed?: boolean;
   mobile?: boolean;
   onCollapse?: () => void;
+  tenantSlug?: string;
   tenantName?: string;
   userEmail?: string;
   userRole?: string;
@@ -217,23 +229,23 @@ function getUserInitials(userEmail?: string) {
 
 function isNavigationItemActive(
   pathname: string,
-  item: (typeof navigationItems)[number],
+  item: NavigationItem,
+  slug: string,
 ) {
-  if (!item.href.startsWith("/")) {
-    return false;
-  }
+  const href = item.getHref(slug);
 
   if (item.match === "exact") {
-    return pathname === item.href;
+    return pathname === href;
   }
 
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  return pathname === href || pathname.startsWith(`${href}/`);
 }
 
 function SidebarContent({
   collapsed = false,
   mobile = false,
   onCollapse,
+  tenantSlug = "",
   tenantName,
   userEmail,
   userRole,
@@ -244,16 +256,18 @@ function SidebarContent({
   const pathname = usePathname();
   const { hasTenantPermission, status: accessStatus } = useAccess();
 
-  function isNavigationItemLocked(item: (typeof navigationItems)[number]) {
+  function isNavigationItemLocked(item: NavigationItem) {
     if (accessStatus !== "ready") {
       return false;
     }
 
-    if (item.href === "/app") {
+    const href = item.getHref(tenantSlug);
+
+    if (href === `/workspace/${tenantSlug}`) {
       return !hasTenantPermission(TENANT_METRICS_READ_PERMISSION);
     }
 
-    if (item.href === "/app/rbac") {
+    if (href === `/workspace/${tenantSlug}/settings/rbac`) {
       return !(
         hasTenantPermission(TENANT_MEMBERS_READ_PERMISSION) ||
         hasTenantPermission(TENANT_PERMISSIONS_MANAGE_PERMISSION)
@@ -327,8 +341,9 @@ function SidebarContent({
       >
         {navigationItems.map((item) => {
           const Icon = item.icon;
-          const isNavigable = item.href.startsWith("/");
-          const isActive = isNavigationItemActive(pathname, item);
+          const href = item.getHref(tenantSlug);
+          const isNavigable = href.startsWith("/");
+          const isActive = isNavigationItemActive(pathname, item, tenantSlug);
           const isLocked = isNavigationItemLocked(item);
           const itemClassName = cn(
             "flex rounded-2xl border transition-colors",
@@ -375,7 +390,7 @@ function SidebarContent({
             return (
               <Link
                 key={item.title}
-                href={item.href}
+                href={href}
                 className={itemClassName}
                 title={isLocked ? `${item.title} · restrito` : item.title}
                 aria-label={item.title}
@@ -420,7 +435,7 @@ function SidebarContent({
           }
 
           return (
-            <Link key={item.title} href={item.href} className={itemClassName}>
+            <Link key={item.title} href={href} className={itemClassName}>
               {content}
             </Link>
           );
@@ -465,7 +480,11 @@ function SidebarContent({
                 </DropdownMenuLabel>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem render={<Link href="/app/user" />}>
+              <DropdownMenuItem
+                render={
+                  <Link href={`/workspace/${tenantSlug}/settings/account`} />
+                }
+              >
                 <Settings className="size-4" />
                 Minha conta
               </DropdownMenuItem>
@@ -475,9 +494,7 @@ function SidebarContent({
                   <DropdownMenuItem
                     variant="destructive"
                     disabled={signOutPending}
-                    onClick={() => {
-                      void onSignOut();
-                    }}
+                    onClick={() => void onSignOut()}
                   >
                     <LogOut className="size-4" />
                     {signOutPending ? "Saindo..." : "Sair"}
@@ -538,7 +555,9 @@ function SidebarContent({
                 <Button
                   variant="outline"
                   nativeButton={false}
-                  render={<Link href="/app/user" />}
+                  render={
+                    <Link href={`/workspace/${tenantSlug}/settings/account`} />
+                  }
                 >
                   <Settings className="size-4" />
                   Minha conta
@@ -548,9 +567,7 @@ function SidebarContent({
                     type="button"
                     variant="destructive"
                     disabled={signOutPending}
-                    onClick={() => {
-                      void onSignOut();
-                    }}
+                    onClick={() => void onSignOut()}
                   >
                     <LogOut className="size-4" />
                     {signOutPending ? "Saindo..." : "Sair"}
@@ -575,6 +592,7 @@ function SidebarContent({
 
 export function AppShell({
   children,
+  tenantSlug,
   tenantName,
   userEmail,
   userRole,
@@ -584,9 +602,31 @@ export function AppShell({
   const pathname = usePathname();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const pageContent =
-    pageContentMap[pathname as keyof typeof pageContentMap] ??
-    pageContentMap["/app"];
+
+  const getPageContent = () => {
+    if (pageContentMap[pathname]) {
+      return pageContentMap[pathname];
+    }
+    for (const [pattern] of Object.entries(pageContentMap)) {
+      const patternParts = pathname.split("/").filter(Boolean);
+      const mapParts = pattern.split("/").filter(Boolean);
+      if (mapParts.length > 0 && patternParts.length >= mapParts.length) {
+        let matches = true;
+        for (let i = 0; i < mapParts.length; i++) {
+          if (mapParts[i] !== patternParts[i] && mapParts[i] !== "[slug]") {
+            matches = false;
+            break;
+          }
+        }
+        if (matches) {
+          return pageContentMap[pattern];
+        }
+      }
+    }
+    return pageContentMap["/workspace/[slug]"];
+  };
+
+  const pageContent = getPageContent();
   const userInitials = getUserInitials(userEmail);
 
   return (
@@ -601,6 +641,7 @@ export function AppShell({
           <SidebarContent
             collapsed={isSidebarCollapsed}
             onCollapse={() => setIsSidebarCollapsed(true)}
+            tenantSlug={tenantSlug}
             tenantName={tenantName}
             userEmail={userEmail}
             userRole={userRole}
@@ -652,14 +693,9 @@ export function AppShell({
                           <LurenessMark subtitle="Application Workspace" />
                         </div>
                         <SheetClose
-                          render={
-                            <Button
-                              variant="outline"
-                              size="icon-sm"
-                              aria-label="Fechar menu lateral"
-                              title="Fechar menu lateral"
-                            />
-                          }
+                          render={<Button variant="outline" size="icon-sm" />}
+                          aria-label="Fechar menu lateral"
+                          title="Fechar menu lateral"
                         >
                           <PanelLeftClose className="size-4" />
                         </SheetClose>
@@ -668,6 +704,7 @@ export function AppShell({
                     <SheetBody className="thin-scrollbar p-4">
                       <SidebarContent
                         mobile
+                        tenantSlug={tenantSlug}
                         tenantName={tenantName}
                         userEmail={userEmail}
                         userRole={userRole}
