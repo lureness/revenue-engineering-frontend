@@ -35,7 +35,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Empty } from "@/components/ui/empty";
+import { Empty, EmptyDescription, EmptyTitle } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -577,9 +577,12 @@ function TeamCard({
             )}
 
             {members.length === 0 && invites.length === 0 && (
-              <p className="text-sm text-muted-foreground">
-                Nenhum membro ou convite ainda. Convide alguém para começar.
-              </p>
+              <Empty>
+                <EmptyTitle>Sem membros</EmptyTitle>
+                <EmptyDescription>
+                  Nenhum membro ou convite ainda. Convide alguém para começar.
+                </EmptyDescription>
+              </Empty>
             )}
           </>
         )}
@@ -638,15 +641,15 @@ export function TeamsView() {
       </div>
 
       {teams.length === 0 ? (
-        <Empty
-          title="Nenhum time criado"
-          description="Crie seu primeiro time para organizar membros e permissões."
-          action={
-            <CreateTeamDialog onCreated={loadTeams}>
-              <Button>Criar time</Button>
-            </CreateTeamDialog>
-          }
-        />
+        <Empty>
+          <EmptyTitle>Nenhum time criado</EmptyTitle>
+          <EmptyDescription>
+            Crie seu primeiro time para organizar membros e permissões.
+          </EmptyDescription>
+          <CreateTeamDialog onCreated={loadTeams}>
+            <Button>Criar time</Button>
+          </CreateTeamDialog>
+        </Empty>
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">
           {teams.map((team) => (
