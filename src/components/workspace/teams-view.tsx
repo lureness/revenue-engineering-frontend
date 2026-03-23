@@ -589,7 +589,6 @@ function TeamCard({
 }
 
 export function TeamsView() {
-  useParams();
   const [teams, setTeams] = useState<TeamItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
