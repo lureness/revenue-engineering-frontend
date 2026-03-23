@@ -445,9 +445,9 @@ function SidebarContent({
           collapsed ? "items-center" : undefined,
         )}
       >
-        {navigationGroups.map((group) => (
+        {navigationGroups.map((group, index) => (
           <NavGroupComponent
-            key={group.title ?? "main"}
+            key={group.title ?? `group-${index}`}
             group={group}
             slug={tenantSlug}
             collapsed={collapsed}
