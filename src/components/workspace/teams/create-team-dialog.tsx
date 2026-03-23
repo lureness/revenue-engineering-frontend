@@ -52,7 +52,7 @@ export function CreateTeamDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
+      <DialogTrigger asChild>
         {children ?? (
           <Button>
             <Plus className="size-4" />

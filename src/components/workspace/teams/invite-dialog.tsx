@@ -61,7 +61,7 @@ export function InviteDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger>
+      <DialogTrigger asChild>
         <Button variant="outline" size="sm">
           <Mail className="size-4" />
           Convidar
