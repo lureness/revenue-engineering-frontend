@@ -69,7 +69,7 @@ export function ProviderOnboardingGate() {
       return;
     }
 
-    router.replace("/app/messaging?setup=provider");
+    router.replace("/workspace/[slug]/inbox/messages?setup=provider");
   }, [needsProviderSetup, pathname, router]);
 
   return null;

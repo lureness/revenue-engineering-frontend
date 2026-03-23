@@ -9,17 +9,22 @@ import { resolveSafeRedirectPath } from "@/lib/auth/navigation";
 export function PublicOnly({ children }: PropsWithChildren) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { status } = useAuth();
+  const { status, tenant } = useAuth();
 
   useEffect(() => {
     if (status !== "authenticated") {
       return;
     }
 
-    router.replace(
-      resolveSafeRedirectPath(searchParams.get("redirectTo"), "/app"),
-    );
-  }, [router, searchParams, status]);
+    const redirectPath = searchParams.get("redirectTo");
+    if (redirectPath) {
+      router.replace(resolveSafeRedirectPath(redirectPath));
+    } else if (tenant?.slug) {
+      router.replace(`/workspace/${tenant.slug}`);
+    } else {
+      router.replace("/workspace/[slug]");
+    }
+  }, [router, searchParams, status, tenant?.slug]);
 
   if (status === "loading") {
     return (

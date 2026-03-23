@@ -1,4 +1,4 @@
-const DEFAULT_AUTH_REDIRECT = "/app";
+const DEFAULT_AUTH_REDIRECT = "/workspace/[slug]";
 
 export function resolveSafeRedirectPath(
   redirectTo?: string | null,
@@ -9,6 +9,10 @@ export function resolveSafeRedirectPath(
   }
 
   if (!redirectTo.startsWith("/") || redirectTo.startsWith("//")) {
+    return fallback;
+  }
+
+  if (redirectTo === "/app" || redirectTo.startsWith("/app/")) {
     return fallback;
   }
 

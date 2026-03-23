@@ -116,7 +116,7 @@ function InviteSummaryCard({ invite }: { invite: ResolvedTeamInvite }) {
 export function TeamInviteFlow() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { status, user, signOut, refreshSession } = useAuth();
+  const { status, tenant, user, signOut, refreshSession } = useAuth();
   const [invite, setInvite] = useState<ResolvedTeamInvite | null>(null);
   const [isResolving, setIsResolving] = useState(true);
   const [resolveError, setResolveError] = useState<{
@@ -209,7 +209,11 @@ export function TeamInviteFlow() {
         description: "Você já pode continuar no workspace.",
       });
       startTransition(() => {
-        router.replace("/app/teams");
+        if (tenant?.slug) {
+          router.replace(`/workspace/${tenant.slug}/teams`);
+        } else {
+          router.replace("/workspace/[slug]/teams");
+        }
       });
     } catch (error) {
       const presentation = formatApiErrorMessage(error, {
@@ -234,7 +238,11 @@ export function TeamInviteFlow() {
       await acceptTeamInvite(token);
       toast.success("Invite aceito com sucesso.");
       startTransition(() => {
-        router.replace("/app/teams");
+        if (tenant?.slug) {
+          router.replace(`/workspace/${tenant.slug}/teams`);
+        } else {
+          router.replace("/workspace/[slug]/teams");
+        }
       });
     } catch (error) {
       const presentation = formatApiErrorMessage(error, {
@@ -399,7 +407,15 @@ export function TeamInviteFlow() {
                 variant="outline"
                 size="lg"
                 nativeButton={false}
-                render={<Link href="/app/teams" />}
+                render={
+                  <Link
+                    href={
+                      tenant?.slug
+                        ? `/workspace/${tenant.slug}/teams`
+                        : "/workspace/[slug]/teams"
+                    }
+                  />
+                }
               >
                 Ir para times
               </Button>

@@ -16,7 +16,7 @@ export function AuthGuard({ children }: PropsWithChildren) {
     }
 
     const query = new URLSearchParams({
-      redirectTo: pathname || "/app",
+      redirectTo: pathname || "/workspace/[slug]",
     });
 
     router.replace(`/login?${query.toString()}`);
