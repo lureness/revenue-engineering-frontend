@@ -68,8 +68,10 @@ import { cn } from "@/lib/utils";
 
 function CreateTeamDialog({
   onCreated,
+  children,
 }: {
   onCreated?: (team: TeamItem) => void;
+  children?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
@@ -96,10 +98,12 @@ function CreateTeamDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Plus className="size-4" />
-          Novo time
-        </Button>
+        {children ?? (
+          <Button>
+            <Plus className="size-4" />
+            Novo time
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
@@ -181,7 +185,7 @@ function InviteDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
+      <DialogTrigger>
         <Button variant="outline" size="sm">
           <Mail className="size-4" />
           Convidar
@@ -307,7 +311,7 @@ function MemberRow({
           </SelectContent>
         </Select>
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+          <DropdownMenuTrigger>
             <Button variant="ghost" size="icon-sm">
               <MoreHorizontal className="size-4" />
             </Button>
@@ -416,7 +420,7 @@ function InviteRow({
         </span>
         {!isAccepted && !isRevoked && (
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger>
               <Button variant="ghost" size="icon-sm">
                 <EllipsisVertical className="size-4" />
               </Button>
@@ -507,7 +511,7 @@ function TeamCard({
             onInvited={loadData}
           />
           <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+            <DropdownMenuTrigger>
               <Button variant="ghost" size="icon-sm">
                 <MoreHorizontal className="size-4" />
               </Button>
@@ -629,16 +633,16 @@ export function TeamsView() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">
-            {teams.length === 0
-              ? "Nenhum time criado"
-              : `${teams.length} time${teams.length !== 1 ? "s" : ""}`}
-          </p>
+      {teams.length !== 0 && (
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm text-muted-foreground">
+              ${teams.length} time{teams.length !== 1 ? "s" : ""}
+            </p>
+          </div>
+          <CreateTeamDialog onCreated={loadTeams} />
         </div>
-        <CreateTeamDialog onCreated={loadTeams} />
-      </div>
+      )}
 
       {teams.length === 0 ? (
         <Empty>
