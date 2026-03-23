@@ -1,7 +1,5 @@
+import { TeamsView } from "@/components/workspace/teams-view";
+
 export default function TeamsPage() {
-  return (
-    <div>
-      <h1>Teams</h1>
-    </div>
-  );
+  return <TeamsView />;
 }
