@@ -1,5 +1,6 @@
-export { CreateTeamDialog } from "./teams/create-team-dialog";
 export { GlobalChat, GlobalChatFab } from "./global-chat";
+export { MessagesView } from "./messages/messages-view";
+export { CreateTeamDialog } from "./teams/create-team-dialog";
 export { InviteDialog } from "./teams/invite-dialog";
 export { InviteRow } from "./teams/invite-row";
 export { MemberRow } from "./teams/member-row";
