@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Anchor,
+  FileText,
   Link2,
   MoreHorizontal,
   Plus,
@@ -96,21 +96,20 @@ async function deleteHook(hookId: string): Promise<void> {
   if (!response.ok) throw new Error("Failed to delete hook");
 }
 
-const eventTypes = [
-  { value: "contact.created", label: "Contato criado" },
-  { value: "contact.updated", label: "Contato atualizado" },
-  { value: "conversation.opened", label: "Conversa aberta" },
-  { value: "conversation.closed", label: "Conversa fechada" },
-  { value: "message.received", label: "Mensagem recebida" },
-  { value: "message.sent", label: "Mensagem enviada" },
-  { value: "survey.completed", label: "Survey completado" },
+const hookTypes = [
+  { value: "ebook", label: "E-book" },
+  { value: "worksheet", label: "Planilha" },
+  { value: "checklist", label: "Checklist" },
+  { value: "guide", label: "Guia" },
+  { value: "template", label: "Template" },
+  { value: "tool", label: "Ferramenta" },
 ];
 
 function CreateHookDialog({ onCreated }: { onCreated?: () => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
-  const [event, setEvent] = useState("contact.created");
+  const [event, setEvent] = useState("ebook");
   const [isLoading, setIsLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -118,14 +117,14 @@ function CreateHookDialog({ onCreated }: { onCreated?: () => void }) {
     setIsLoading(true);
     try {
       await createHook({ name, url, event });
-      toast.success("Hook criado com sucesso.");
+      toast.success("Isca criada com sucesso.");
       setName("");
       setUrl("");
-      setEvent("contact.created");
+      setEvent("ebook");
       setOpen(false);
       onCreated?.();
     } catch {
-      toast.error("Erro ao criar hook.");
+      toast.error("Erro ao criar isca.");
     } finally {
       setIsLoading(false);
     }
@@ -137,16 +136,17 @@ function CreateHookDialog({ onCreated }: { onCreated?: () => void }) {
         render={
           <Button>
             <Plus className="size-4" />
-            Novo hook
+            Nova isca
           </Button>
         }
       />
       <DialogContent className="sm:max-w-md">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Novo webhook</DialogTitle>
+            <DialogTitle>Nova isca digital</DialogTitle>
             <DialogDescription>
-              Configure um webhook para receber notificações de eventos.
+              Cadastre um material para campanhas, landing pages e fluxos de
+              captação.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -156,30 +156,30 @@ function CreateHookDialog({ onCreated }: { onCreated?: () => void }) {
                 id="hook-name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Meu webhook"
+                placeholder="Checklist de diagnóstico comercial"
                 required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="hook-url">URL do endpoint</Label>
+              <Label htmlFor="hook-url">Link do material</Label>
               <Input
                 id="hook-url"
                 type="url"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
-                placeholder="https://seu-servidor.com/webhook"
+                placeholder="https://seu-dominio.com/material/checklist-diagnostico"
                 required
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="hook-event">Evento</Label>
+              <Label htmlFor="hook-event">Tipo de material</Label>
               <select
                 id="hook-event"
                 value={event}
                 onChange={(e) => setEvent(e.target.value)}
                 className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {eventTypes.map((et) => (
+                {hookTypes.map((et) => (
                   <option key={et.value} value={et.value}>
                     {et.label}
                   </option>
@@ -189,7 +189,7 @@ function CreateHookDialog({ onCreated }: { onCreated?: () => void }) {
           </div>
           <DialogFooter>
             <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Criando..." : "Criar hook"}
+              {isLoading ? "Criando..." : "Criar isca"}
             </Button>
           </DialogFooter>
         </form>
@@ -214,30 +214,30 @@ function HookCard({
     try {
       await toggleHook(hook.id, hook.is_active);
       onUpdated?.();
-      toast.success(hook.is_active ? "Hook desativado." : "Hook ativado.");
+      toast.success(hook.is_active ? "Isca desativada." : "Isca ativada.");
     } catch {
-      toast.error("Erro ao atualizar hook.");
+      toast.error("Erro ao atualizar isca.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleDelete = async () => {
-    if (!confirm(`Excluir hook "${hook.name}"?`)) return;
+    if (!confirm(`Excluir isca "${hook.name}"?`)) return;
     setIsLoading(true);
     try {
       await deleteHook(hook.id);
       onDeleted?.();
-      toast.success("Hook excluído.");
+      toast.success("Isca excluída.");
     } catch {
-      toast.error("Erro ao excluir hook.");
+      toast.error("Erro ao excluir isca.");
     } finally {
       setIsLoading(false);
     }
   };
 
   const eventLabel =
-    eventTypes.find((et) => et.value === hook.event)?.label ?? hook.event;
+    hookTypes.find((et) => et.value === hook.event)?.label ?? hook.event;
 
   return (
     <Card className="bg-card/85 shadow-sm">
@@ -245,7 +245,7 @@ function HookCard({
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-foreground/10">
-              <Anchor className="size-5 text-foreground/60" />
+              <FileText className="size-5 text-foreground/60" />
             </div>
             <div>
               <CardTitle className="text-base">{hook.name}</CardTitle>
@@ -283,7 +283,7 @@ function HookCard({
       <CardContent>
         <div className="flex items-center justify-between">
           <Badge variant={hook.is_active ? "default" : "secondary"}>
-            {hook.is_active ? "Ativo" : "Inativo"}
+            {hook.is_active ? "Disponível" : "Oculta"}
           </Badge>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
             <Link2 className="size-3" />
@@ -362,8 +362,8 @@ export function MarketingHooksView() {
         <div>
           <p className="text-sm text-muted-foreground">
             {hooks.length === 0
-              ? "Nenhum hook"
-              : `${hooks.length} hook${hooks.length !== 1 ? "s" : ""}`}
+              ? "Nenhuma isca"
+              : `${hooks.length} isca${hooks.length !== 1 ? "s" : ""}`}
           </p>
         </div>
         <CreateHookDialog onCreated={loadHooks} />
@@ -380,7 +380,7 @@ export function MarketingHooksView() {
         </Card>
         <Card className="bg-card/85 shadow-sm">
           <CardContent className="grid gap-3 pt-5">
-            <Badge variant="default">Ativos</Badge>
+            <Badge variant="default">Disponíveis</Badge>
             <p className="font-serif text-3xl tracking-tight text-green-600">
               {hooksByStatus.active}
             </p>
@@ -388,7 +388,7 @@ export function MarketingHooksView() {
         </Card>
         <Card className="bg-card/85 shadow-sm">
           <CardContent className="grid gap-3 pt-5">
-            <Badge variant="outline">Inativos</Badge>
+            <Badge variant="outline">Ocultas</Badge>
             <p className="font-serif text-3xl tracking-tight text-muted-foreground">
               {hooksByStatus.inactive}
             </p>
@@ -398,7 +398,7 @@ export function MarketingHooksView() {
 
       <div>
         <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-medium">Webhooks configurados</h2>
+          <h2 className="text-lg font-medium">Iscas digitais cadastradas</h2>
           <Button
             variant="outline"
             size="sm"
@@ -415,12 +415,12 @@ export function MarketingHooksView() {
           <Empty className="py-12">
             <EmptyHeader>
               <EmptyMedia variant="icon">
-                <Anchor className="size-4" />
+                <FileText className="size-4" />
               </EmptyMedia>
-              <EmptyTitle>Nenhum webhook configurado</EmptyTitle>
+              <EmptyTitle>Nenhuma isca cadastrada</EmptyTitle>
               <EmptyDescription>
-                Configure webhooks para receber notificações de eventos em tempo
-                real.
+                Cadastre ebooks, planilhas, guias e outros materiais para usar
+                em campanhas e atrair novos leads.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>

@@ -170,9 +170,9 @@ export function WorkspaceDashboard({ tenantSlug }: WorkspaceDashboardProps) {
         href={`${basePath}/lp`}
       />
       <MetricCard
-        label="Hooks"
+        label="Iscas"
         value={0}
-        description="Marketing hooks criados"
+        description="Iscas digitais cadastradas"
         icon={MessageSquareText}
         href={`${basePath}/hooks`}
       />

@@ -2,7 +2,6 @@
 
 import {
   Activity,
-  Anchor,
   BookUser,
   Bot,
   ChevronDown,
@@ -12,6 +11,7 @@ import {
   Layers3,
   Lock,
   LogOut,
+  Magnet,
   Menu,
   MessageCircleMore,
   PanelLeftClose,
@@ -148,11 +148,10 @@ const navigationGroups: NavGroup[] = [
         children: true,
       },
       {
-        title: "Hooks",
+        title: "Iscas",
         href: "/workspace/[slug]/hooks",
-        icon: Anchor,
+        icon: Magnet,
         match: "prefix",
-        children: true,
       },
     ],
   },
@@ -210,6 +209,12 @@ const pageContentMap: Record<
     title: "Diagnósticos públicos e captação",
     description:
       "Instale templates, publique quizzes e transforme tráfego em lead qualificado com contexto para o inbox.",
+  },
+  "/workspace/[slug]/hooks": {
+    eyebrow: "Iscas",
+    title: "Iscas digitais e materiais de captação",
+    description:
+      "Organize ebooks, planilhas, checklists e outros materiais usados para atrair leads e enriquecer campanhas.",
   },
   "/workspace/[slug]/inbox": {
     eyebrow: "Inbox",
