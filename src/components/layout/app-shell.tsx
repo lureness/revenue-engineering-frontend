@@ -94,7 +94,6 @@ const navigationGroups: NavGroup[] = [
     ],
   },
   {
-    title: "Operações",
     items: [
       {
         title: "Inbox",
@@ -123,20 +122,6 @@ const navigationGroups: NavGroup[] = [
         children: true,
       },
       {
-        title: "Times",
-        href: "/workspace/[slug]/teams",
-        icon: UsersRound,
-        match: "prefix",
-      },
-      {
-        title: "Surveys",
-        href: "/workspace/[slug]/surveys",
-        icon: FileText,
-        match: "prefix",
-        permission:
-          TENANT_SURVEYS_READ_PERMISSION || TENANT_SURVEYS_MANAGE_PERMISSION,
-      },
-      {
         title: "Mensagens",
         href: "/workspace/[slug]/inbox/messages",
         icon: MessageCircleMore,
@@ -152,7 +137,24 @@ const navigationGroups: NavGroup[] = [
         href: "/workspace/[slug]/hooks",
         icon: Anchor,
         match: "prefix",
-        children: true,
+      },
+    ],
+  },
+  {
+    items: [
+      {
+        title: "Times",
+        href: "/workspace/[slug]/teams",
+        icon: UsersRound,
+        match: "prefix",
+      },
+      {
+        title: "Surveys",
+        href: "/workspace/[slug]/surveys",
+        icon: FileText,
+        match: "prefix",
+        permission:
+          TENANT_SURVEYS_READ_PERMISSION || TENANT_SURVEYS_MANAGE_PERMISSION,
       },
     ],
   },
