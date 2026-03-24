@@ -486,7 +486,7 @@ export function ContactsView() {
             </Button>
           </div>
 
-          <div className="relative max-w-md">
+          <div className="relative w-full">
             <Search className="pointer-events-none absolute top-1/2 left-4 size-4 -translate-y-1/2 text-muted-foreground" />
             {searchQuery && (
               <button
