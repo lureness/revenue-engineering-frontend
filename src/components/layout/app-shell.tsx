@@ -3,6 +3,7 @@
 import {
   Activity,
   BookUser,
+  Bot,
   ChevronDown,
   ChevronRight,
   ChevronUp,
@@ -48,6 +49,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
+  TENANT_AGENTS_MANAGE_PERMISSION,
+  TENANT_AGENTS_READ_PERMISSION,
   TENANT_AUDIT_LOGS_READ_PERMISSION,
   TENANT_CONTACTS_MANAGE_PERMISSION,
   TENANT_CONTACTS_READ_PERMISSION,
@@ -108,6 +111,15 @@ const navigationGroups: NavGroup[] = [
         match: "prefix",
         permission:
           TENANT_CONTACTS_READ_PERMISSION || TENANT_CONTACTS_MANAGE_PERMISSION,
+        children: true,
+      },
+      {
+        title: "Agents",
+        href: "/workspace/[slug]/agents",
+        icon: Bot,
+        match: "prefix",
+        permission:
+          TENANT_AGENTS_READ_PERMISSION || TENANT_AGENTS_MANAGE_PERMISSION,
         children: true,
       },
       {
