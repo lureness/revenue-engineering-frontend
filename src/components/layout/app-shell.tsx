@@ -6,6 +6,7 @@ import {
   Bot,
   ChevronDown,
   ChevronRight,
+  ChevronUp,
   FileText,
   Inbox,
   Layers3,
@@ -137,6 +138,12 @@ const navigationGroups: NavGroup[] = [
           TENANT_SURVEYS_READ_PERMISSION || TENANT_SURVEYS_MANAGE_PERMISSION,
       },
       {
+        title: "LPs",
+        href: "/workspace/[slug]/lp",
+        icon: Layers3,
+        match: "prefix",
+      },
+      {
         title: "Mensagens",
         href: "/workspace/[slug]/inbox/messages",
         icon: MessageCircleMore,
@@ -209,6 +216,18 @@ const pageContentMap: Record<
     title: "Diagnósticos públicos e captação",
     description:
       "Instale templates, publique quizzes e transforme tráfego em lead qualificado com contexto para o inbox.",
+  },
+  "/workspace/[slug]/lp": {
+    eyebrow: "LPs",
+    title: "Landing pages do workspace",
+    description:
+      "Crie, organize e refine landing pages para campanhas, iscas e captação de leads diretamente dentro do produto.",
+  },
+  "/workspace/[slug]/lp/create": {
+    eyebrow: "LPs",
+    title: "Criar landing page",
+    description:
+      "Monte a LP no editor visual drag-and-drop e refine o rascunho antes da publicação.",
   },
   "/workspace/[slug]/hooks": {
     eyebrow: "Iscas",

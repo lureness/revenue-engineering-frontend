@@ -1,0 +1,67 @@
+.gjs-editor-cont,
+.gjs-editor {
+  font-family: var(--font-sans);
+  position: relative;
+  z-index: 0;
+}
+
+.gjs-one-bg {
+  background: var(--card);
+}
+
+.gjs-two-color {
+  color: var(--muted-foreground);
+}
+
+.gjs-three-bg {
+  background: color-mix(in oklab, var(--secondary) 82%, white);
+}
+
+.gjs-four-color,
+.gjs-color-main {
+  color: var(--foreground);
+}
+
+.gjs-border-color {
+  border-color: var(--border);
+}
+
+.gjs-pn-btn,
+.gjs-block-label,
+.gjs-sm-sector-title,
+.gjs-label {
+  color: var(--foreground);
+}
+
+.gjs-pn-btn.gjs-pn-active {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.gjs-block {
+  min-height: auto;
+  width: auto;
+  border-radius: 1rem;
+  border: 1px solid var(--border);
+  box-shadow: none;
+}
+
+.gjs-blocks-c {
+  gap: 0.75rem;
+}
+
+.gjs-cv-canvas {
+  background:
+    radial-gradient(
+      circle at top left,
+      color-mix(in oklab, var(--primary) 16%, transparent),
+      transparent 35%
+    ), var(--background);
+}
+
+.gjs-editor-cont .gjs-editor,
+.gjs-editor-cont .gjs-cv-canvas,
+.gjs-editor-cont .gjs-frame-wrapper,
+.gjs-editor-cont .gjs-frame {
+  border-radius: 0;
+}

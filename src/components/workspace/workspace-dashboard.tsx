@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { countLandingPages } from "@/lib/lp/storage";
 import {
   getWorkspaceDashboardData,
   type WorkspaceDashboardData,
@@ -84,6 +85,7 @@ type WorkspaceDashboardProps = {
 
 export function WorkspaceDashboard({ tenantSlug }: WorkspaceDashboardProps) {
   const [data, setData] = useState<WorkspaceDashboardData | null>(null);
+  const [landingPagesCount, setLandingPagesCount] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -92,6 +94,7 @@ export function WorkspaceDashboard({ tenantSlug }: WorkspaceDashboardProps) {
       try {
         const dashboardData = await getWorkspaceDashboardData();
         setData(dashboardData);
+        setLandingPagesCount(countLandingPages(tenantSlug));
       } catch (err) {
         setError("Não foi possível carregar os dados do workspace.");
         console.error("Dashboard load error:", err);
@@ -101,7 +104,7 @@ export function WorkspaceDashboard({ tenantSlug }: WorkspaceDashboardProps) {
     }
 
     void loadData();
-  }, []);
+  }, [tenantSlug]);
 
   if (isLoading) {
     return (
@@ -164,7 +167,7 @@ export function WorkspaceDashboard({ tenantSlug }: WorkspaceDashboardProps) {
       />
       <MetricCard
         label="LPs"
-        value={0}
+        value={landingPagesCount}
         description="Landing pages criadas"
         icon={Layers3}
         href={`${basePath}/lp`}
