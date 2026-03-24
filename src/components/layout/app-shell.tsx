@@ -94,7 +94,6 @@ const navigationGroups: NavGroup[] = [
     ],
   },
   {
-    title: "Operações",
     items: [
       {
         title: "Inbox",
@@ -354,6 +353,9 @@ function NavItemComponent({
     <Link href={href} className={itemClassName}>
       <Icon className={cn("shrink-0", "size-4")} />
       <span className={cn("flex-1 font-medium", "text-sm")}>{item.title}</span>
+      {item.hasChildren && (
+        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
+      )}
       {isLocked && (
         <Lock
           className={cn(
