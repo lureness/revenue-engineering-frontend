@@ -1,6 +1,7 @@
 export { AgentsView } from "./agents/agents-view";
 export { ContactsView } from "./contacts/contacts-view";
 export { GlobalChat, GlobalChatFab } from "./global-chat";
+export { MarketingHooksView } from "./hooks/hooks-view";
 export { MessagesView } from "./messages/messages-view";
 export { CreateTeamDialog } from "./teams/create-team-dialog";
 export { InviteDialog } from "./teams/invite-dialog";

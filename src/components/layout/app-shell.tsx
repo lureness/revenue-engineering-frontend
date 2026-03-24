@@ -2,6 +2,7 @@
 
 import {
   Activity,
+  Anchor,
   BookUser,
   Bot,
   ChevronDown,
@@ -93,6 +94,7 @@ const navigationGroups: NavGroup[] = [
     ],
   },
   {
+    title: "Operações",
     items: [
       {
         title: "Inbox",
@@ -121,21 +123,6 @@ const navigationGroups: NavGroup[] = [
         children: true,
       },
       {
-        title: "Mensagens",
-        href: "/workspace/[slug]/inbox/messages",
-        icon: MessageCircleMore,
-        match: "prefix",
-        permission:
-          TENANT_MESSAGES_READ_PERMISSION ||
-          TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION ||
-          TENANT_WHATSAPP_SENDERS_READ_PERMISSION,
-        children: true,
-      },
-    ],
-  },
-  {
-    items: [
-      {
         title: "Times",
         href: "/workspace/[slug]/teams",
         icon: UsersRound,
@@ -148,6 +135,24 @@ const navigationGroups: NavGroup[] = [
         match: "prefix",
         permission:
           TENANT_SURVEYS_READ_PERMISSION || TENANT_SURVEYS_MANAGE_PERMISSION,
+      },
+      {
+        title: "Mensagens",
+        href: "/workspace/[slug]/inbox/messages",
+        icon: MessageCircleMore,
+        match: "prefix",
+        permission:
+          TENANT_MESSAGES_READ_PERMISSION ||
+          TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION ||
+          TENANT_WHATSAPP_SENDERS_READ_PERMISSION,
+        children: true,
+      },
+      {
+        title: "Hooks",
+        href: "/workspace/[slug]/hooks",
+        icon: Anchor,
+        match: "prefix",
+        children: true,
       },
     ],
   },
@@ -290,7 +295,8 @@ function NavItemComponent({
   pathname,
   isLocked,
   layout = "default",
-  showOpenBorder = false,
+  isExpanded = false,
+  onToggleChildren,
 }: {
   item: NavItem;
   slug: string;
@@ -298,33 +304,29 @@ function NavItemComponent({
   pathname: string;
   isLocked: boolean;
   layout?: "default" | "hero" | "child";
-  showOpenBorder?: boolean;
+  isExpanded?: boolean;
+  onToggleChildren?: () => void;
 }) {
   const Icon = item.icon;
   const href = item.href.replace("[slug]", slug);
   const isActive = isNavItemActive(pathname, item, slug);
   const isHero = layout === "hero";
   const isChild = layout === "child";
+  const showToggle = !collapsed && !!item.hasChildren && !!onToggleChildren;
 
   const itemClassName = cn(
     "group flex transition-all duration-200",
     collapsed
       ? "size-10 items-center justify-center"
       : isHero
-        ? "items-center gap-4 rounded-xl px-5 py-3.5 border"
+        ? "items-center gap-4 rounded-xl px-5 py-3.5"
         : isChild
           ? "items-center gap-4 rounded-xl px-5 py-3.5"
           : "items-center gap-3 rounded-xl px-3 py-2.5",
     isHero
       ? isActive
-        ? cn(
-            "bg-foreground text-background shadow-lg",
-            showOpenBorder ? "border-border/70" : "border-transparent",
-          )
-        : cn(
-            "bg-card/90 text-foreground hover:bg-foreground hover:text-background",
-            showOpenBorder ? "border-border/70" : "border-transparent",
-          )
+        ? "bg-foreground text-background shadow-lg"
+        : "border border-border/70 bg-card/90 text-foreground shadow-sm hover:border-foreground/15 hover:bg-card"
       : isChild
         ? isActive
           ? "bg-foreground/30 text-foreground"
@@ -348,13 +350,57 @@ function NavItemComponent({
     );
   }
 
+  if (showToggle) {
+    return (
+      <div className={itemClassName}>
+        <Link
+          href={href}
+          className="flex min-w-0 flex-1 items-center gap-4"
+          aria-current={isActive ? "page" : undefined}
+        >
+          <Icon className={cn("shrink-0", "size-4")} />
+          <span className={cn("flex-1 font-medium", "text-sm")}>
+            {item.title}
+          </span>
+        </Link>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className={cn(
+            "-mr-2 h-8 w-8 rounded-full text-current hover:bg-background/10 hover:text-current",
+            isHero
+              ? "text-background/80 hover:bg-background/10"
+              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+          )}
+          onClick={onToggleChildren}
+          aria-label={isExpanded ? "Fechar submenu" : "Abrir submenu"}
+          title={isExpanded ? "Fechar submenu" : "Abrir submenu"}
+        >
+          <ChevronDown
+            className={cn(
+              "size-4 transition-transform",
+              isExpanded && "rotate-180",
+            )}
+          />
+        </Button>
+        {isLocked && (
+          <Lock
+            className={cn(
+              "shrink-0",
+              isHero || isChild ? "size-4" : "size-3.5",
+              isHero ? "text-background/70" : "text-muted-foreground",
+            )}
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <Link href={href} className={itemClassName}>
       <Icon className={cn("shrink-0", "size-4")} />
       <span className={cn("flex-1 font-medium", "text-sm")}>{item.title}</span>
-      {item.hasChildren && (
-        <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
-      )}
       {isLocked && (
         <Lock
           className={cn(
@@ -393,6 +439,9 @@ function NavGroupComponent({
 
   const parentItem = visibleItems.find((item) => item.hasChildren);
   const childItems = visibleItems.filter((item) => item.children);
+  const standaloneItems = visibleItems.filter(
+    (item) => item !== parentItem && !item.children,
+  );
 
   if (collapsed) {
     return (
@@ -411,25 +460,45 @@ function NavGroupComponent({
     );
   }
 
-  if (parentItem && childItems.length > 0) {
+  if (group.title && parentItem && childItems.length > 0) {
     return (
       <div className="space-y-3">
-        <button
-          type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex w-full items-center justify-between text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <span>{group.title || ""}</span>
-          <ChevronDown
-            className={cn(
-              "size-4 transition-transform",
-              isExpanded && "rotate-180",
-            )}
-          />
-        </button>
+        <div className="px-5 py-1 text-left text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
+          {group.title}
+        </div>
 
-        {isExpanded && (
-          <div className="space-y-1">
+        <div className="space-y-3">
+          {isExpanded ? (
+            <div className="isolate flex items-center flex-col space-y-3">
+              <div className="relative z-10 w-full">
+                <NavItemComponent
+                  item={parentItem}
+                  slug={slug}
+                  collapsed={collapsed}
+                  pathname={pathname}
+                  isLocked={false}
+                  layout="hero"
+                  isExpanded={isExpanded}
+                  onToggleChildren={() => setIsExpanded(false)}
+                />
+              </div>
+              <div className="relative z-0 -mt-5 w-11/12 rounded-b-[1.25rem] bg-secondary/75 p-4">
+                <div className="flex flex-col gap-2">
+                  {childItems.map((item) => (
+                    <NavItemComponent
+                      key={item.href}
+                      item={item}
+                      slug={slug}
+                      collapsed={collapsed}
+                      pathname={pathname}
+                      isLocked={false}
+                      layout="child"
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
             <NavItemComponent
               item={parentItem}
               slug={slug}
@@ -437,9 +506,14 @@ function NavGroupComponent({
               pathname={pathname}
               isLocked={false}
               layout="hero"
+              isExpanded={isExpanded}
+              onToggleChildren={() => setIsExpanded(true)}
             />
-            <div className="ml-4 space-y-1">
-              {childItems.map((item) => (
+          )}
+
+          {standaloneItems.length > 0 ? (
+            <div className="flex flex-col gap-1">
+              {standaloneItems.map((item) => (
                 <NavItemComponent
                   key={item.href}
                   item={item}
@@ -447,12 +521,11 @@ function NavGroupComponent({
                   collapsed={collapsed}
                   pathname={pathname}
                   isLocked={false}
-                  layout="child"
                 />
               ))}
             </div>
-          </div>
-        )}
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -466,16 +539,15 @@ function NavGroupComponent({
           className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground"
         >
           <span>{group.title}</span>
-          <ChevronDown
-            className={cn(
-              "size-3.5 transition-transform",
-              isExpanded && "rotate-180",
-            )}
-          />
+          {isExpanded ? (
+            <ChevronUp className="size-3.5" />
+          ) : (
+            <ChevronDown className="size-3.5" />
+          )}
         </button>
       )}
       {(!group.title || isExpanded) && (
-        <div className="flex flex-col gap-1">
+        <div className={cn("flex flex-col gap-1", group.title ? "" : "")}>
           {visibleItems.map((item) => (
             <NavItemComponent
               key={item.href}
