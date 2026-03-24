@@ -6,7 +6,6 @@ import {
   Bot,
   ChevronDown,
   ChevronRight,
-  ChevronUp,
   FileText,
   Inbox,
   Layers3,
@@ -394,9 +393,6 @@ function NavGroupComponent({
 
   const parentItem = visibleItems.find((item) => item.hasChildren);
   const childItems = visibleItems.filter((item) => item.children);
-  const standaloneItems = visibleItems.filter(
-    (item) => item !== parentItem && !item.children,
-  );
 
   if (collapsed) {
     return (
@@ -415,76 +411,47 @@ function NavGroupComponent({
     );
   }
 
-  if (group.title && parentItem && childItems.length > 0) {
+  if (parentItem && childItems.length > 0) {
     return (
       <div className="space-y-3">
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex w-full items-center justify-between px-5 py-1 text-left text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground transition-colors hover:text-foreground"
+          className="flex w-full items-center justify-between text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground transition-colors hover:text-foreground"
         >
-          <span>{group.title}</span>
-          {isExpanded ? (
-            <ChevronUp className="size-5" />
-          ) : (
-            <ChevronDown className="size-5" />
-          )}
+          <span>{group.title || ""}</span>
+          <ChevronDown
+            className={cn(
+              "size-4 transition-transform",
+              isExpanded && "rotate-180",
+            )}
+          />
         </button>
 
-        {isExpanded ? (
-          <div className="isolate space-y-3 flex items-center flex-col">
-            <div className="relative z-10 w-full">
-              <NavItemComponent
-                item={parentItem}
-                slug={slug}
-                collapsed={collapsed}
-                pathname={pathname}
-                isLocked={false}
-                layout="hero"
-                showOpenBorder={isExpanded}
-              />
+        {isExpanded && (
+          <div className="space-y-1">
+            <NavItemComponent
+              item={parentItem}
+              slug={slug}
+              collapsed={collapsed}
+              pathname={pathname}
+              isLocked={false}
+              layout="hero"
+            />
+            <div className="ml-4 space-y-1">
+              {childItems.map((item) => (
+                <NavItemComponent
+                  key={item.href}
+                  item={item}
+                  slug={slug}
+                  collapsed={collapsed}
+                  pathname={pathname}
+                  isLocked={false}
+                  layout="child"
+                />
+              ))}
             </div>
-            <div className="relative z-0 -mt-5 rounded-b-[1.25rem] bg-secondary/75 p-4 w-11/12">
-              <div className="flex flex-col gap-2">
-                {childItems.map((item) => (
-                  <NavItemComponent
-                    key={item.href}
-                    item={item}
-                    slug={slug}
-                    collapsed={collapsed}
-                    pathname={pathname}
-                    isLocked={false}
-                    layout="child"
-                  />
-                ))}
-              </div>
-            </div>
-
-            {standaloneItems.length > 0 ? (
-              <div className="flex flex-col gap-1">
-                {standaloneItems.map((item) => (
-                  <NavItemComponent
-                    key={item.href}
-                    item={item}
-                    slug={slug}
-                    collapsed={collapsed}
-                    pathname={pathname}
-                    isLocked={false}
-                  />
-                ))}
-              </div>
-            ) : null}
           </div>
-        ) : (
-          <NavItemComponent
-            item={parentItem}
-            slug={slug}
-            collapsed={collapsed}
-            pathname={pathname}
-            isLocked={false}
-            layout="hero"
-            showOpenBorder={isExpanded}
-          />
         )}
       </div>
     );
@@ -499,15 +466,16 @@ function NavGroupComponent({
           className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground"
         >
           <span>{group.title}</span>
-          {isExpanded ? (
-            <ChevronUp className="size-3.5" />
-          ) : (
-            <ChevronDown className="size-3.5" />
-          )}
+          <ChevronDown
+            className={cn(
+              "size-3.5 transition-transform",
+              isExpanded && "rotate-180",
+            )}
+          />
         </button>
       )}
       {(!group.title || isExpanded) && (
-        <div className={cn("flex flex-col gap-1", group.title ? "" : "")}>
+        <div className="flex flex-col gap-1">
           {visibleItems.map((item) => (
             <NavItemComponent
               key={item.href}
