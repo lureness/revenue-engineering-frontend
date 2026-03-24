@@ -1,7 +1,5 @@
+import { ContactsView } from "@/components/workspace/contacts/contacts-view";
+
 export default function ContactsPage() {
-  return (
-    <div>
-      <h1>Contacts</h1>
-    </div>
-  );
+  return <ContactsView />;
 }
