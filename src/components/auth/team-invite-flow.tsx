@@ -443,7 +443,15 @@ export function TeamInviteFlow() {
                   variant="outline"
                   size="lg"
                   nativeButton={false}
-                  render={<Link href="/app" />}
+                  render={
+                    <Link
+                      href={
+                        tenant?.slug
+                          ? `/workspace/${tenant.slug}`
+                          : "/workspace/[slug]"
+                      }
+                    />
+                  }
                 >
                   Manter sessão atual
                 </Button>

@@ -1,21 +1,30 @@
 export function shouldRedirectToProviderSetup(pathname: string) {
-  if (!pathname.startsWith("/app")) {
+  if (!pathname.startsWith("/workspace/")) {
     return false;
   }
 
-  if (pathname.startsWith("/app/messaging")) {
+  if (
+    pathname.startsWith("/workspace/") &&
+    pathname.includes("/inbox/messages")
+  ) {
     return false;
   }
 
-  if (pathname.startsWith("/app/contacts")) {
+  if (
+    pathname.startsWith("/workspace/") &&
+    pathname.includes("/inbox/contacts")
+  ) {
     return false;
   }
 
-  if (pathname.startsWith("/app/surveys")) {
+  if (pathname.startsWith("/workspace/") && pathname.includes("/surveys")) {
     return false;
   }
 
-  if (pathname === "/app/user") {
+  if (
+    pathname.startsWith("/workspace/") &&
+    pathname.includes("/settings/account")
+  ) {
     return false;
   }
 

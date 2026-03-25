@@ -146,9 +146,12 @@ export default function LandingPage() {
                 </div>
                 <div className="space-y-2">
                   <Badge variant="secondary">Rota privada</Badge>
-                  <p className="text-sm font-medium text-foreground">`/app`</p>
+                  <p className="text-sm font-medium text-foreground">
+                    `/workspace/[slug]`
+                  </p>
                   <p className="text-sm leading-6 text-muted-foreground">
-                    Shell preparado para dashboard, auth e módulos operacionais.
+                    Shell autenticado do workspace com módulos operacionais e
+                    configurações por slug.
                   </p>
                 </div>
                 <div className="space-y-2">

@@ -12,9 +12,5 @@ export function resolveSafeRedirectPath(
     return fallback;
   }
 
-  if (redirectTo === "/app" || redirectTo.startsWith("/app/")) {
-    return fallback;
-  }
-
   return redirectTo;
 }

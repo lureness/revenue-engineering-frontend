@@ -14,10 +14,4 @@ describe("resolveSafeRedirectPath", () => {
     expect(resolveSafeRedirectPath("//evil.test")).toBe("/workspace/[slug]");
     expect(resolveSafeRedirectPath("app/teams")).toBe("/workspace/[slug]");
   });
-
-  it("redireciona do /app antigo para workspace", () => {
-    expect(resolveSafeRedirectPath("/app")).toBe("/workspace/[slug]");
-    expect(resolveSafeRedirectPath("/app/teams")).toBe("/workspace/[slug]");
-    expect(resolveSafeRedirectPath("/app/inbox")).toBe("/workspace/[slug]");
-  });
 });

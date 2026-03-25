@@ -4,6 +4,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { useAccess } from "@/components/access/access-provider";
+import { useAuth } from "@/components/auth/auth-provider";
 import { getProviderAccounts } from "@/lib/messaging/api";
 import { shouldRedirectToProviderSetup } from "@/lib/messaging/onboarding";
 import { TENANT_PROVIDER_ACCOUNTS_MANAGE_PERMISSION } from "@/lib/rbac/permissions";
@@ -11,6 +12,7 @@ import { TENANT_PROVIDER_ACCOUNTS_MANAGE_PERMISSION } from "@/lib/rbac/permissio
 export function ProviderOnboardingGate() {
   const router = useRouter();
   const pathname = usePathname();
+  const { tenant } = useAuth();
   const { hasTenantPermission, status: accessStatus } = useAccess();
   const [needsProviderSetup, setNeedsProviderSetup] = useState(false);
   const canManageProviderAccounts = hasTenantPermission(
@@ -69,8 +71,12 @@ export function ProviderOnboardingGate() {
       return;
     }
 
-    router.replace("/workspace/[slug]/inbox/messages?setup=provider");
-  }, [needsProviderSetup, pathname, router]);
+    if (!tenant?.slug) {
+      return;
+    }
+
+    router.replace(`/workspace/${tenant.slug}/inbox/messages?setup=provider`);
+  }, [needsProviderSetup, pathname, router, tenant?.slug]);
 
   return null;
 }

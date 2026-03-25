@@ -4,16 +4,30 @@ import { shouldRedirectToProviderSetup } from "@/lib/messaging/onboarding";
 
 describe("shouldRedirectToProviderSetup", () => {
   it("redireciona rotas internas do app que dependem do setup inicial", () => {
-    expect(shouldRedirectToProviderSetup("/app")).toBe(true);
-    expect(shouldRedirectToProviderSetup("/app/teams")).toBe(true);
-    expect(shouldRedirectToProviderSetup("/app/rbac")).toBe(true);
+    expect(shouldRedirectToProviderSetup("/workspace/basixdigital")).toBe(true);
+    expect(shouldRedirectToProviderSetup("/workspace/basixdigital/teams")).toBe(
+      true,
+    );
+    expect(
+      shouldRedirectToProviderSetup("/workspace/basixdigital/settings/rbac"),
+    ).toBe(true);
   });
 
   it("não redireciona a área de mensageria nem conta do usuário", () => {
-    expect(shouldRedirectToProviderSetup("/app/messaging")).toBe(false);
-    expect(shouldRedirectToProviderSetup("/app/messaging/senders")).toBe(false);
-    expect(shouldRedirectToProviderSetup("/app/contacts")).toBe(false);
-    expect(shouldRedirectToProviderSetup("/app/user")).toBe(false);
+    expect(
+      shouldRedirectToProviderSetup("/workspace/basixdigital/inbox/messages"),
+    ).toBe(false);
+    expect(
+      shouldRedirectToProviderSetup(
+        "/workspace/basixdigital/inbox/messages/provider",
+      ),
+    ).toBe(false);
+    expect(
+      shouldRedirectToProviderSetup("/workspace/basixdigital/inbox/contacts"),
+    ).toBe(false);
+    expect(
+      shouldRedirectToProviderSetup("/workspace/basixdigital/settings/account"),
+    ).toBe(false);
   });
 
   it("ignora rotas públicas", () => {

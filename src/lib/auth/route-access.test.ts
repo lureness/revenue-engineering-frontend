@@ -6,8 +6,10 @@ import {
 
 describe("auth route access", () => {
   it("detects protected workspace routes", () => {
-    expect(isProtectedAppRoute("/app")).toBe(true);
-    expect(isProtectedAppRoute("/app/user")).toBe(true);
+    expect(isProtectedAppRoute("/workspace/basixdigital")).toBe(true);
+    expect(
+      isProtectedAppRoute("/workspace/basixdigital/settings/account"),
+    ).toBe(true);
     expect(isProtectedAppRoute("/login")).toBe(false);
   });
 
@@ -20,11 +22,13 @@ describe("auth route access", () => {
   it("redirects unauthenticated access to protected routes", () => {
     expect(
       resolveAuthRedirectForPath({
-        pathname: "/app/user",
+        pathname: "/workspace/basixdigital/settings/account",
         search: "?tab=password",
         hasSession: false,
       }),
-    ).toBe("/login?redirectTo=%2Fapp%2Fuser%3Ftab%3Dpassword");
+    ).toBe(
+      "/login?redirectTo=%2Fworkspace%2Fbasixdigital%2Fsettings%2Faccount%3Ftab%3Dpassword",
+    );
   });
 
   it("does not redirect public auth routes only because a cookie exists", () => {

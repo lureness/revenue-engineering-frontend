@@ -19,7 +19,7 @@ export function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/app/:path*",
+    "/workspace/:path*",
     "/login",
     "/signup",
     "/forgot-password",

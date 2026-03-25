@@ -8,7 +8,7 @@ import { PublicOnly } from "@/components/auth/public-only";
 const authFeatures = [
   "Sessão protegida por cookies httpOnly.",
   "Redirecionamento automático para o workspace após login.",
-  "Proteção da rota `/app` no cliente e no servidor.",
+  "Proteção das rotas `/workspace/[slug]` no cliente e no servidor.",
   "Logout com revogação de sessão no backend.",
   "Recuperação, redefinição e troca de senha já conectadas à API.",
 ] as const;
