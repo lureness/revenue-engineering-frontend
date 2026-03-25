@@ -1,32 +1,17 @@
-import type { LandingPageDraft, LandingPageTemplateCode } from "@/lib/lp/types";
+import type {
+  CreateLandingPagePayload,
+  LandingPageDraft,
+  LandingPageTemplateCode,
+} from "@/lib/lp/types";
 
-const STORAGE_PREFIX = "lureness:landing-pages";
-
-function buildStorageKey(tenantSlug: string) {
-  return `${STORAGE_PREFIX}:${tenantSlug}`;
-}
-
-function buildId() {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
-
-  return `lp-${Date.now()}`;
-}
-
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
-}
+type LandingPageTemplateDefaults = Omit<
+  CreateLandingPagePayload,
+  "status" | "projectData" | "renderedHtml" | "renderedCss"
+>;
 
 const templateDefaults: Record<
   LandingPageTemplateCode,
-  Omit<LandingPageDraft, "id" | "updatedAt" | "status">
+  LandingPageTemplateDefaults
 > = {
   "lead-magnet": {
     name: "Checklist comercial",
@@ -106,64 +91,57 @@ const templateDefaults: Record<
   },
 };
 
-export function listLandingPages(tenantSlug: string): LandingPageDraft[] {
-  if (typeof window === "undefined") {
-    return [];
-  }
-
-  const raw = window.localStorage.getItem(buildStorageKey(tenantSlug));
-  if (!raw) {
-    return [];
-  }
-
-  try {
-    const parsed = JSON.parse(raw) as LandingPageDraft[];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
 }
 
-export function saveLandingPages(
-  tenantSlug: string,
-  pages: LandingPageDraft[],
-): void {
-  if (typeof window === "undefined") {
-    return;
-  }
+type LandingPageMarkupSeed = Pick<
+  CreateLandingPagePayload,
+  | "eyebrow"
+  | "headline"
+  | "subheadline"
+  | "primaryCta"
+  | "secondaryCta"
+  | "captureTitle"
+  | "captureDescription"
+  | "benefitsText"
+  | "proofText"
+>;
 
-  window.localStorage.setItem(
-    buildStorageKey(tenantSlug),
-    JSON.stringify(pages),
-  );
-}
-
-export function countLandingPages(tenantSlug: string): number {
-  return listLandingPages(tenantSlug).length;
-}
-
-export function createLandingPageDraft(
+export function buildLandingPageCreatePayload(
   template: LandingPageTemplateCode,
   tenantSlug: string,
   existingCount = 0,
-): LandingPageDraft {
+): CreateLandingPagePayload {
   const base = templateDefaults[template];
   const sequence = existingCount > 0 ? `-${existingCount + 1}` : "";
-
-  return {
+  const name = `${base.name}${sequence ? ` ${existingCount + 1}` : ""}`;
+  const slug = slugify(`${tenantSlug}-${base.slug}${sequence}`);
+  const initialPayload = {
     ...base,
-    id: buildId(),
-    name: `${base.name}${sequence ? ` ${existingCount + 1}` : ""}`,
-    slug: slugify(`${tenantSlug}-${base.slug}${sequence}`),
-    status: "draft",
+    name,
+    slug,
+    status: "draft" as const,
     projectData: null,
     renderedHtml: "",
     renderedCss: "",
-    updatedAt: new Date().toISOString(),
+  };
+
+  return {
+    ...initialPayload,
+    renderedHtml: buildLandingPageInitialMarkup(initialPayload),
   };
 }
 
-export function buildLandingPageInitialMarkup(page: LandingPageDraft): string {
+export function buildLandingPageInitialMarkup(
+  page: LandingPageMarkupSeed | LandingPageDraft,
+): string {
   const benefits = page.benefitsText
     .split("\n")
     .map((item) => item.trim())

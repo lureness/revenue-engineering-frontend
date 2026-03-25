@@ -15,7 +15,7 @@ import { useEffect, useState } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { countLandingPages } from "@/lib/lp/storage";
+import { getLandingPages } from "@/lib/lp/api";
 import {
   getWorkspaceDashboardData,
   type WorkspaceDashboardData,
@@ -92,9 +92,12 @@ export function WorkspaceDashboard({ tenantSlug }: WorkspaceDashboardProps) {
   useEffect(() => {
     async function loadData() {
       try {
-        const dashboardData = await getWorkspaceDashboardData();
+        const [dashboardData, landingPages] = await Promise.all([
+          getWorkspaceDashboardData(),
+          getLandingPages({ limit: 200 }),
+        ]);
         setData(dashboardData);
-        setLandingPagesCount(countLandingPages(tenantSlug));
+        setLandingPagesCount(landingPages.length);
       } catch (err) {
         setError("Não foi possível carregar os dados do workspace.");
         console.error("Dashboard load error:", err);
@@ -104,7 +107,7 @@ export function WorkspaceDashboard({ tenantSlug }: WorkspaceDashboardProps) {
     }
 
     void loadData();
-  }, [tenantSlug]);
+  }, []);
 
   if (isLoading) {
     return (

@@ -120,6 +120,12 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   "missing permission: tenant.surveys.manage": {
     title: "Você não pode gerenciar os surveys deste workspace.",
   },
+  "missing permission: tenant.landing_pages.read": {
+    title: "Você não pode visualizar as landing pages deste workspace.",
+  },
+  "missing permission: tenant.landing_pages.manage": {
+    title: "Você não pode gerenciar as landing pages deste workspace.",
+  },
   "missing permission: tenant.conversations.read": {
     title: "Você não pode visualizar as conversas deste workspace.",
   },
@@ -221,6 +227,12 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   },
   "typebot api returned an invalid payload": {
     title: "O Typebot respondeu com um payload invalido.",
+  },
+  "landing page already exists for this workspace": {
+    title: "Já existe uma landing page com esse slug neste workspace.",
+  },
+  "landing page not found": {
+    title: "A landing page informada não foi encontrada.",
   },
   "survey submission is not complete": {
     title: "Responda todas as perguntas antes de gerar o diagnóstico.",

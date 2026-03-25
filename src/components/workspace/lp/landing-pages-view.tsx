@@ -35,12 +35,19 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { formatApiErrorMessage } from "@/lib/api/error-messages";
 import {
-  createLandingPageDraft,
-  listLandingPages,
-  saveLandingPages,
-} from "@/lib/lp/storage";
-import type { LandingPageDraft, LandingPageTemplateCode } from "@/lib/lp/types";
+  createLandingPage,
+  deleteLandingPage,
+  getLandingPages,
+  updateLandingPage,
+} from "@/lib/lp/api";
+import { buildLandingPageCreatePayload } from "@/lib/lp/templates";
+import type {
+  LandingPageDraft,
+  LandingPageTemplateCode,
+  UpdateLandingPagePayload,
+} from "@/lib/lp/types";
 import { cn } from "@/lib/utils";
 import {
   LandingPageGrapesEditor,
@@ -89,6 +96,29 @@ type LandingPagesViewProps = {
   pageId?: string | null;
 };
 
+function buildLandingPageUpdatePayload(
+  page: LandingPageDraft,
+): UpdateLandingPagePayload {
+  return {
+    name: page.name,
+    slug: page.slug,
+    template: page.template,
+    status: page.status,
+    eyebrow: page.eyebrow,
+    headline: page.headline,
+    subheadline: page.subheadline,
+    primaryCta: page.primaryCta,
+    secondaryCta: page.secondaryCta,
+    captureTitle: page.captureTitle,
+    captureDescription: page.captureDescription,
+    benefitsText: page.benefitsText,
+    proofText: page.proofText,
+    projectData: page.projectData,
+    renderedHtml: page.renderedHtml,
+    renderedCss: page.renderedCss,
+  };
+}
+
 export function LandingPagesView({
   tenantSlug,
   mode = "library",
@@ -96,32 +126,64 @@ export function LandingPagesView({
 }: LandingPagesViewProps) {
   const router = useRouter();
   const editorRef = useRef<LandingPageGrapesEditorHandle | null>(null);
+  const autosaveTimeoutRef = useRef<number | null>(null);
+  const saveRevisionRef = useRef<Record<string, number>>({});
   const [pages, setPages] = useState<LandingPageDraft[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [hasLoaded, setHasLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCreatingPage, setIsCreatingPage] = useState(false);
+  const [isDeletingPageId, setIsDeletingPageId] = useState<string | null>(null);
+  const [isAutosaving, setIsAutosaving] = useState(false);
   const isCreateMode = mode === "create";
 
   useEffect(() => {
-    const storedPages = listLandingPages(tenantSlug);
-    const preferredId =
-      pageId && storedPages.some((page) => page.id === pageId)
-        ? pageId
-        : isCreateMode
-          ? null
-          : (storedPages[0]?.id ?? null);
+    let isMounted = true;
 
-    setPages(storedPages);
-    setSelectedId(preferredId);
-    setHasLoaded(true);
-  }, [isCreateMode, pageId, tenantSlug]);
+    async function loadPages() {
+      try {
+        setIsLoading(true);
+        const landingPages = await getLandingPages({ limit: 200 });
 
-  useEffect(() => {
-    if (!hasLoaded) {
-      return;
+        if (!isMounted) {
+          return;
+        }
+
+        const preferredId =
+          pageId && landingPages.some((page) => page.id === pageId)
+            ? pageId
+            : isCreateMode
+              ? null
+              : (landingPages[0]?.id ?? null);
+
+        setPages(landingPages);
+        setSelectedId(preferredId);
+      } catch (error) {
+        if (!isMounted) {
+          return;
+        }
+
+        const presentation = formatApiErrorMessage(error, {
+          fallbackTitle: "Não foi possível carregar as landing pages.",
+        });
+        toast.error(presentation.title, {
+          description: presentation.description,
+        });
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     }
 
-    saveLandingPages(tenantSlug, pages);
-  }, [hasLoaded, pages, tenantSlug]);
+    void loadPages();
+
+    return () => {
+      isMounted = false;
+      if (autosaveTimeoutRef.current) {
+        window.clearTimeout(autosaveTimeoutRef.current);
+      }
+    };
+  }, [isCreateMode, pageId]);
 
   const selectedPage = useMemo(
     () => pages.find((page) => page.id === selectedId) ?? null,
@@ -139,20 +201,90 @@ export function LandingPagesView({
     router.push(buildCreateHref(id));
   };
 
-  const handleCreatePage = (templateCode: LandingPageTemplateCode) => {
-    const nextPage = createLandingPageDraft(
-      templateCode,
-      tenantSlug,
-      pages.length,
-    );
+  const persistPage = useCallback(
+    async (page: LandingPageDraft, revision: number) => {
+      try {
+        setIsAutosaving(true);
+        const savedPage = await updateLandingPage(
+          page.id,
+          buildLandingPageUpdatePayload(page),
+        );
 
-    setPages((current) => [nextPage, ...current]);
-    setSelectedId(nextPage.id);
-    toast.success("Landing page criada.");
-    router.push(buildCreateHref(nextPage.id));
+        if (saveRevisionRef.current[page.id] !== revision) {
+          return;
+        }
+
+        setPages((current) =>
+          current.map((item) => (item.id === savedPage.id ? savedPage : item)),
+        );
+      } catch (error) {
+        const presentation = formatApiErrorMessage(error, {
+          fallbackTitle: "Não foi possível salvar a landing page.",
+        });
+        toast.error(presentation.title, {
+          description: presentation.description,
+        });
+      } finally {
+        setIsAutosaving(false);
+      }
+    },
+    [],
+  );
+
+  const schedulePersist = useCallback(
+    (page: LandingPageDraft) => {
+      if (autosaveTimeoutRef.current) {
+        window.clearTimeout(autosaveTimeoutRef.current);
+      }
+
+      const revision = (saveRevisionRef.current[page.id] ?? 0) + 1;
+      saveRevisionRef.current[page.id] = revision;
+
+      autosaveTimeoutRef.current = window.setTimeout(() => {
+        void persistPage(page, revision);
+      }, 700);
+    },
+    [persistPage],
+  );
+
+  const applySelectedPageUpdate = useCallback(
+    (updater: (page: LandingPageDraft) => LandingPageDraft) => {
+      if (!selectedPage) {
+        return;
+      }
+
+      const nextPage = updater(selectedPage);
+      setPages((current) =>
+        current.map((page) => (page.id === nextPage.id ? nextPage : page)),
+      );
+      schedulePersist(nextPage);
+    },
+    [schedulePersist, selectedPage],
+  );
+
+  const handleCreatePage = async (templateCode: LandingPageTemplateCode) => {
+    try {
+      setIsCreatingPage(true);
+      const createdPage = await createLandingPage(
+        buildLandingPageCreatePayload(templateCode, tenantSlug, pages.length),
+      );
+      setPages((current) => [createdPage, ...current]);
+      setSelectedId(createdPage.id);
+      toast.success("Landing page criada.");
+      router.push(buildCreateHref(createdPage.id));
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Não foi possível criar a landing page.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
+    } finally {
+      setIsCreatingPage(false);
+    }
   };
 
-  const handleDeletePage = (currentPageId: string) => {
+  const handleDeletePage = async (currentPageId: string) => {
     const page = pages.find((item) => item.id === currentPageId);
     if (!page) return;
 
@@ -160,40 +292,48 @@ export function LandingPagesView({
       return;
     }
 
-    const nextPages = pages.filter((item) => item.id !== currentPageId);
-    const nextSelectedId = nextPages[0]?.id ?? null;
+    try {
+      setIsDeletingPageId(currentPageId);
+      await deleteLandingPage(currentPageId);
 
-    setPages(nextPages);
-    setSelectedId(nextSelectedId);
-    toast.success("Landing page removida.");
+      const nextPages = pages.filter((item) => item.id !== currentPageId);
+      const nextSelectedId = nextPages[0]?.id ?? null;
 
-    if (!isCreateMode) {
-      return;
+      setPages(nextPages);
+      setSelectedId(nextSelectedId);
+      toast.success("Landing page removida.");
+
+      if (!isCreateMode) {
+        return;
+      }
+
+      if (nextSelectedId) {
+        router.replace(buildCreateHref(nextSelectedId));
+        return;
+      }
+
+      router.replace(`/workspace/${tenantSlug}/lp`);
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Não foi possível excluir a landing page.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
+    } finally {
+      setIsDeletingPageId(null);
     }
-
-    if (nextSelectedId) {
-      router.replace(buildCreateHref(nextSelectedId));
-      return;
-    }
-
-    router.replace(`/workspace/${tenantSlug}/lp`);
   };
 
   const handleUpdatePage = <K extends keyof LandingPageDraft>(
     key: K,
     value: LandingPageDraft[K],
   ) => {
-    setPages((current) =>
-      current.map((page) =>
-        page.id === selectedId
-          ? {
-              ...page,
-              [key]: value,
-              updatedAt: new Date().toISOString(),
-            }
-          : page,
-      ),
-    );
+    applySelectedPageUpdate((page) => ({
+      ...page,
+      [key]: value,
+      updatedAt: new Date().toISOString(),
+    }));
   };
 
   const handleProjectChange = useCallback(
@@ -202,21 +342,15 @@ export function LandingPagesView({
       renderedHtml: string;
       renderedCss: string;
     }) => {
-      setPages((current) =>
-        current.map((page) =>
-          page.id === selectedId
-            ? {
-                ...page,
-                projectData: payload.projectData,
-                renderedHtml: payload.renderedHtml,
-                renderedCss: payload.renderedCss,
-                updatedAt: new Date().toISOString(),
-              }
-            : page,
-        ),
-      );
+      applySelectedPageUpdate((page) => ({
+        ...page,
+        projectData: payload.projectData,
+        renderedHtml: payload.renderedHtml,
+        renderedCss: payload.renderedCss,
+        updatedAt: new Date().toISOString(),
+      }));
     },
-    [selectedId],
+    [applySelectedPageUpdate],
   );
 
   const handleCopySlug = async () => {
@@ -229,6 +363,16 @@ export function LandingPagesView({
       toast.error("Nao foi possivel copiar o slug.");
     }
   };
+
+  if (isLoading && pages.length === 0) {
+    return (
+      <Card className="bg-card/85 shadow-sm">
+        <CardContent className="flex min-h-48 items-center justify-center text-sm text-muted-foreground">
+          Carregando landing pages...
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (isCreateMode) {
     return (
@@ -251,6 +395,7 @@ export function LandingPagesView({
                       key={template.code}
                       type="button"
                       onClick={() => handleCreatePage(template.code)}
+                      disabled={isCreatingPage}
                       className="rounded-[1.25rem] border border-border/70 bg-background/85 p-4 text-left transition-colors hover:border-primary/40 hover:bg-card"
                     >
                       <div className="mb-3 inline-flex size-10 items-center justify-center rounded-2xl bg-foreground/10 text-foreground">
@@ -316,7 +461,7 @@ export function LandingPagesView({
                 <div>
                   <CardTitle>Configurações da LP</CardTitle>
                   <CardDescription>
-                    Nome interno, slug e status do rascunho publicado.
+                    Nome interno, slug e status persistidos no workspace.
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -350,6 +495,7 @@ export function LandingPagesView({
                   </Button>
                   <Button
                     variant="destructive"
+                    disabled={isDeletingPageId === selectedPage.id}
                     onClick={() => handleDeletePage(selectedPage.id)}
                   >
                     <Trash2 className="size-4" />
@@ -387,13 +533,18 @@ export function LandingPagesView({
 
                 <div className="rounded-[1.5rem] border border-border/70 bg-background/85 p-5">
                   <p className="text-sm font-medium text-foreground">
-                    Persistência local
+                    Persistência no backend
                   </p>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Cada LP salva o projeto visual no navegador, separado por
-                    workspace. Isso permite rascunhar, testar e iterar antes de
-                    conectar a publicação real no backend.
+                    Cada ajuste salva o rascunho do editor visual no workspace.
+                    Isso permite continuar a edição de qualquer dispositivo sem
+                    depender do navegador atual.
                   </p>
+                  {isAutosaving ? (
+                    <Badge variant="secondary" className="mt-4">
+                      Salvando...
+                    </Badge>
+                  ) : null}
                 </div>
               </CardContent>
             </Card>
@@ -403,7 +554,8 @@ export function LandingPagesView({
                 <div>
                   <CardTitle>Editor visual da LP</CardTitle>
                   <CardDescription>
-                    Canvas drag-and-drop com autosave local usando GrapesJS.
+                    Canvas drag-and-drop com autosave no backend usando
+                    GrapesJS.
                   </CardDescription>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -476,6 +628,7 @@ export function LandingPagesView({
                     key={template.code}
                     type="button"
                     onClick={() => handleCreatePage(template.code)}
+                    disabled={isCreatingPage}
                     className="rounded-[1.25rem] border border-border/70 bg-background/85 p-4 text-left transition-colors hover:border-primary/40 hover:bg-card"
                   >
                     <div className="mb-3 inline-flex size-10 items-center justify-center rounded-2xl bg-foreground/10 text-foreground">
@@ -547,7 +700,7 @@ export function LandingPagesView({
           <CardHeader>
             <CardTitle>Resumo rapido</CardTitle>
             <CardDescription>
-              Controle local dos rascunhos e publicacoes deste workspace.
+              Controle persistido dos rascunhos e publicacoes deste workspace.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4">
@@ -582,12 +735,12 @@ export function LandingPagesView({
 
             <div className="space-y-2 text-sm leading-6 text-muted-foreground">
               <p>
-                Este slice salva o estado das LPs por workspace no navegador e
-                usa um editor visual drag-and-drop para montar as paginas.
+                As LPs ficam salvas no backend do workspace com HTML, CSS e
+                dados estruturados do editor visual.
               </p>
               <p>
-                O proximo passo natural agora e publicar essas LPs com URL real,
-                dominio e integracao com surveys, iscas e campanhas.
+                O proximo passo natural agora e conectar dominio, captura de
+                leads e integracoes com surveys, iscas e campanhas.
               </p>
             </div>
           </CardContent>

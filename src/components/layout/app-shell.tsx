@@ -56,6 +56,8 @@ import {
   TENANT_CONTACTS_MANAGE_PERMISSION,
   TENANT_CONTACTS_READ_PERMISSION,
   TENANT_CONVERSATIONS_READ_PERMISSION,
+  TENANT_LANDING_PAGES_MANAGE_PERMISSION,
+  TENANT_LANDING_PAGES_READ_PERMISSION,
   TENANT_MEMBERS_READ_PERMISSION,
   TENANT_MESSAGES_READ_PERMISSION,
   TENANT_METRICS_READ_PERMISSION,
@@ -142,6 +144,9 @@ const navigationGroups: NavGroup[] = [
         href: "/workspace/[slug]/lp",
         icon: Layers3,
         match: "prefix",
+        permission:
+          TENANT_LANDING_PAGES_READ_PERMISSION ||
+          TENANT_LANDING_PAGES_MANAGE_PERMISSION,
       },
       {
         title: "Mensagens",

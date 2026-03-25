@@ -11,7 +11,7 @@ import {
 } from "react";
 import { toast } from "sonner";
 
-import { buildLandingPageInitialMarkup } from "@/lib/lp/storage";
+import { buildLandingPageInitialMarkup } from "@/lib/lp/templates";
 import type { LandingPageDraft, LandingPageProjectData } from "@/lib/lp/types";
 
 type LandingPageGrapesEditorProps = {
