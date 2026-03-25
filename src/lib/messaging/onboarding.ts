@@ -3,27 +3,18 @@ export function shouldRedirectToProviderSetup(pathname: string) {
     return false;
   }
 
-  if (
-    pathname.startsWith("/workspace/") &&
-    pathname.includes("/inbox/messages")
-  ) {
-    return false;
-  }
+  const allowedWithoutProviderSetup = [
+    "/inbox/messages",
+    "/inbox/contacts",
+    "/inbox/agents",
+    "/surveys",
+    "/settings/account",
+  ];
 
   if (
-    pathname.startsWith("/workspace/") &&
-    pathname.includes("/inbox/contacts")
-  ) {
-    return false;
-  }
-
-  if (pathname.startsWith("/workspace/") && pathname.includes("/surveys")) {
-    return false;
-  }
-
-  if (
-    pathname.startsWith("/workspace/") &&
-    pathname.includes("/settings/account")
+    allowedWithoutProviderSetup.some((allowedPath) =>
+      pathname.includes(allowedPath),
+    )
   ) {
     return false;
   }

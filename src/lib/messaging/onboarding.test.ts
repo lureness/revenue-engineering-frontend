@@ -13,7 +13,7 @@ describe("shouldRedirectToProviderSetup", () => {
     ).toBe(true);
   });
 
-  it("não redireciona a área de mensageria nem conta do usuário", () => {
+  it("não redireciona a área de mensageria, agents e conta do usuário", () => {
     expect(
       shouldRedirectToProviderSetup("/workspace/basixdigital/inbox/messages"),
     ).toBe(false);
@@ -24,6 +24,9 @@ describe("shouldRedirectToProviderSetup", () => {
     ).toBe(false);
     expect(
       shouldRedirectToProviderSetup("/workspace/basixdigital/inbox/contacts"),
+    ).toBe(false);
+    expect(
+      shouldRedirectToProviderSetup("/workspace/basixdigital/inbox/agents"),
     ).toBe(false);
     expect(
       shouldRedirectToProviderSetup("/workspace/basixdigital/settings/account"),

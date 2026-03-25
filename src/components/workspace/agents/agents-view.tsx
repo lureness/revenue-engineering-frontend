@@ -1,18 +1,8 @@
 "use client";
 
-import {
-  Activity,
-  Bot,
-  MoreHorizontal,
-  Pause,
-  Play,
-  Plus,
-  RefreshCcw,
-  Trash2,
-} from "lucide-react";
+import { Activity, Bot, MoreHorizontal, Plus, RefreshCcw } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -46,86 +36,118 @@ import {
 } from "@/components/ui/empty";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Textarea } from "@/components/ui/textarea";
+import { apiRequest } from "@/lib/api/client";
+import { formatApiErrorMessage } from "@/lib/api/error-messages";
 import { cn } from "@/lib/utils";
 
 type AgentItem = {
   id: string;
+  code: string;
   name: string;
-  description: string | null;
-  status: "active" | "inactive" | "paused";
-  model: string;
-  prompt_template: string | null;
+  role_title: string | null;
+  description: string;
+  system_prompt: string;
+  opening_message_template: string;
+  is_active: boolean;
   created_at: string;
+  updated_at: string;
 };
 
 type CreateAgentPayload = {
+  code: string;
   name: string;
+  role_title?: string;
   description?: string;
-  model: string;
-  prompt_template?: string;
+  system_prompt?: string;
+  opening_message_template: string;
+  is_active?: boolean;
 };
 
+function slugifyAgentCode(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 100);
+}
+
 async function getAgents(): Promise<AgentItem[]> {
-  const response = await fetch("/api/inbox/agents");
-  if (!response.ok) throw new Error("Failed to fetch agents");
-  return response.json();
+  return apiRequest<AgentItem[]>("/inbox/agents");
 }
 
 async function createAgent(payload: CreateAgentPayload): Promise<AgentItem> {
-  const response = await fetch("/api/inbox/agents", {
+  return apiRequest<AgentItem>("/inbox/agents", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: payload,
   });
-  if (!response.ok) throw new Error("Failed to create agent");
-  return response.json();
 }
 
-async function updateAgentStatus(
+async function updateAgent(
   agentId: string,
-  status: string,
-): Promise<void> {
-  const response = await fetch(`/api/inbox/agents/${agentId}`, {
+  payload: Partial<CreateAgentPayload>,
+): Promise<AgentItem> {
+  return apiRequest<AgentItem>(`/inbox/agents/${agentId}`, {
     method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ status }),
+    body: payload,
   });
-  if (!response.ok) throw new Error("Failed to update agent");
-}
-
-async function deleteAgent(agentId: string): Promise<void> {
-  const response = await fetch(`/api/inbox/agents/${agentId}`, {
-    method: "DELETE",
-  });
-  if (!response.ok) throw new Error("Failed to delete agent");
 }
 
 function CreateAgentDialog({ onCreated }: { onCreated?: () => void }) {
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
+  const [code, setCode] = useState("");
+  const [roleTitle, setRoleTitle] = useState("Especialista");
   const [description, setDescription] = useState("");
-  const [model, setModel] = useState("gpt-4o-mini");
+  const [systemPrompt, setSystemPrompt] = useState("");
+  const [openingMessageTemplate, setOpeningMessageTemplate] = useState(
+    "Olá{% if contact.first_name %} {{ contact.first_name }}{% endif %}! Aqui é {{ agent.name }} da {{ workspace.name }}.",
+  );
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleNameChange = (value: string) => {
+    setName(value);
+    setCode((currentCode) =>
+      currentCode === "" || currentCode === slugifyAgentCode(name)
+        ? slugifyAgentCode(value)
+        : currentCode,
+    );
+  };
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     setIsLoading(true);
+
     try {
       await createAgent({
+        code: slugifyAgentCode(code || name),
         name,
-        description: description || undefined,
-        model,
+        role_title: roleTitle || undefined,
+        description,
+        system_prompt: systemPrompt,
+        opening_message_template: openingMessageTemplate,
+        is_active: true,
       });
       toast.success("Agent criado com sucesso.");
       setName("");
+      setCode("");
+      setRoleTitle("Especialista");
       setDescription("");
-      setModel("gpt-4o-mini");
+      setSystemPrompt("");
+      setOpeningMessageTemplate(
+        "Olá{% if contact.first_name %} {{ contact.first_name }}{% endif %}! Aqui é {{ agent.name }} da {{ workspace.name }}.",
+      );
       setOpen(false);
       onCreated?.();
-    } catch {
-      toast.error("Erro ao criar agent. Verifique os dados.");
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Erro ao criar agent.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
     } finally {
       setIsLoading(false);
     }
@@ -141,41 +163,81 @@ function CreateAgentDialog({ onCreated }: { onCreated?: () => void }) {
           </Button>
         }
       />
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Novo agent</DialogTitle>
             <DialogDescription>
-              Crie um agent de IA para automatizar conversas.
+              Cadastre o especialista que vai atuar no inbox e nos fluxos
+              pós-survey do workspace.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-2">
+                <Label htmlFor="agent-name">Nome</Label>
+                <Input
+                  id="agent-name"
+                  value={name}
+                  onChange={(event) => handleNameChange(event.target.value)}
+                  placeholder="Especialista de Diagnóstico"
+                  required
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="agent-code">Código</Label>
+                <Input
+                  id="agent-code"
+                  value={code}
+                  onChange={(event) =>
+                    setCode(slugifyAgentCode(event.target.value))
+                  }
+                  placeholder="especialista-diagnostico"
+                  required
+                />
+              </div>
+            </div>
             <div className="grid gap-2">
-              <Label htmlFor="agent-name">Nome</Label>
+              <Label htmlFor="agent-role-title">Cargo ou papel</Label>
               <Input
-                id="agent-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nome do agent"
-                required
+                id="agent-role-title"
+                value={roleTitle}
+                onChange={(event) => setRoleTitle(event.target.value)}
+                placeholder="Especialista em Receita"
               />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="agent-description">Descrição</Label>
-              <Input
+              <Textarea
                 id="agent-description"
                 value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Breve descrição do agent"
+                onChange={(event) => setDescription(event.target.value)}
+                placeholder="Explique quando esse agent deve atuar e qual contexto ele cobre."
+                rows={3}
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="agent-model">Modelo</Label>
-              <Input
-                id="agent-model"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                placeholder="gpt-4o-mini"
+              <Label htmlFor="agent-system-prompt">System prompt</Label>
+              <Textarea
+                id="agent-system-prompt"
+                value={systemPrompt}
+                onChange={(event) => setSystemPrompt(event.target.value)}
+                placeholder="Instruções internas de atuação do agent."
+                rows={5}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="agent-opening-message">
+                Mensagem inicial do agent
+              </Label>
+              <Textarea
+                id="agent-opening-message"
+                value={openingMessageTemplate}
+                onChange={(event) =>
+                  setOpeningMessageTemplate(event.target.value)
+                }
+                placeholder="Mensagem enviada quando o agent assumir a conversa."
+                rows={5}
                 required
               />
             </div>
@@ -194,68 +256,52 @@ function CreateAgentDialog({ onCreated }: { onCreated?: () => void }) {
 function AgentCard({
   agent,
   onUpdated,
-  onDeleted,
 }: {
   agent: AgentItem;
   onUpdated?: () => void;
-  onDeleted?: () => void;
 }) {
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleStatusChange = async (status: string) => {
+  const handleActivationToggle = async (nextIsActive: boolean) => {
     setIsLoading(true);
+
     try {
-      await updateAgentStatus(agent.id, status);
+      await updateAgent(agent.id, { is_active: nextIsActive });
       onUpdated?.();
       toast.success(
-        `Agent ${status === "active" ? "ativado" : status === "paused" ? "pausado" : "desativado"}.`,
+        nextIsActive ? "Agent ativado com sucesso." : "Agent desativado.",
       );
-    } catch {
-      toast.error("Erro ao atualizar status.");
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Erro ao atualizar agent.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
     } finally {
       setIsLoading(false);
     }
   };
-
-  const handleDelete = async () => {
-    if (!confirm(`Excluir agent "${agent.name}"?`)) return;
-    setIsLoading(true);
-    try {
-      await deleteAgent(agent.id);
-      onDeleted?.();
-      toast.success("Agent excluído.");
-    } catch {
-      toast.error("Erro ao excluir agent.");
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const statusConfig = {
-    active: { label: "Ativo", color: "bg-green-500/10 text-green-600" },
-    inactive: { label: "Inativo", color: "bg-muted text-muted-foreground" },
-    paused: { label: "Pausado", color: "bg-amber-500/10 text-amber-600" },
-  };
-
-  const status =
-    statusConfig[agent.status as keyof typeof statusConfig] ??
-    statusConfig.inactive;
 
   return (
     <Card className="bg-card/85 shadow-sm">
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-xl bg-foreground/10">
               <Bot className="size-5 text-foreground/60" />
             </div>
-            <div>
+            <div className="space-y-1">
               <CardTitle className="text-base">{agent.name}</CardTitle>
-              {agent.description && (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                <span>{agent.code}</span>
+                {agent.role_title ? <span>• {agent.role_title}</span> : null}
+              </div>
+              {agent.description ? (
                 <CardDescription className="text-xs">
                   {agent.description}
                 </CardDescription>
-              )}
+              ) : null}
             </div>
           </div>
           <DropdownMenu>
@@ -267,52 +313,46 @@ function AgentCard({
               }
             />
             <DropdownMenuContent align="end">
-              {agent.status !== "active" && (
-                <DropdownMenuItem
-                  onClick={() => void handleStatusChange("active")}
-                >
-                  <Play className="size-4" />
-                  Ativar
-                </DropdownMenuItem>
-              )}
-              {agent.status !== "paused" && agent.status === "active" && (
-                <DropdownMenuItem
-                  onClick={() => void handleStatusChange("paused")}
-                >
-                  <Pause className="size-4" />
-                  Pausar
-                </DropdownMenuItem>
-              )}
-              {agent.status !== "inactive" && (
-                <DropdownMenuItem
-                  onClick={() => void handleStatusChange("inactive")}
-                >
-                  <Activity className="size-4" />
-                  Desativar
-                </DropdownMenuItem>
-              )}
-              <Separator />
               <DropdownMenuItem
-                variant="destructive"
                 disabled={isLoading}
-                onClick={handleDelete}
+                onClick={() => void handleActivationToggle(!agent.is_active)}
               >
-                <Trash2 className="size-4" />
-                Excluir
+                <Activity className="size-4" />
+                {agent.is_active ? "Desativar" : "Ativar"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         <div className="flex items-center justify-between">
           <Badge
             variant="secondary"
-            className={cn("text-[10px]", status.color)}
+            className={cn(
+              "text-[10px]",
+              agent.is_active
+                ? "bg-green-500/10 text-green-600"
+                : "bg-muted text-muted-foreground",
+            )}
           >
-            {status.label}
+            {agent.is_active ? "Ativo" : "Inativo"}
           </Badge>
-          <span className="text-xs text-muted-foreground">{agent.model}</span>
+          <span className="text-xs text-muted-foreground">
+            Atualizado em{" "}
+            {new Date(agent.updated_at).toLocaleDateString("pt-BR", {
+              day: "2-digit",
+              month: "2-digit",
+              year: "numeric",
+            })}
+          </span>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+          <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            Mensagem inicial
+          </p>
+          <p className="line-clamp-3 text-sm text-foreground/80">
+            {agent.opening_message_template}
+          </p>
         </div>
       </CardContent>
     </Card>
@@ -321,16 +361,23 @@ function AgentCard({
 
 export function AgentsView() {
   const [agents, setAgents] = useState<AgentItem[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const loadAgents = useCallback(async () => {
     setIsLoading(true);
+    setError(null);
+
     try {
       const data = await getAgents();
       setAgents(Array.isArray(data) ? data : []);
-    } catch {
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Não foi possível carregar os agents do workspace.",
+      });
       setAgents([]);
+      setError(presentation.title);
     } finally {
       setIsLoading(false);
     }
@@ -350,9 +397,8 @@ export function AgentsView() {
   }, [loadAgents]);
 
   const agentsByStatus = {
-    active: agents.filter((a) => a.status === "active").length,
-    paused: agents.filter((a) => a.status === "paused").length,
-    inactive: agents.filter((a) => a.status === "inactive").length,
+    active: agents.filter((agent) => agent.is_active).length,
+    inactive: agents.filter((agent) => !agent.is_active).length,
   };
 
   if (isLoading) {
@@ -363,8 +409,8 @@ export function AgentsView() {
           <Skeleton className="h-10 w-36" />
         </div>
         <div className="grid gap-4 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="bg-card/85 shadow-sm">
+          {[1, 2, 3].map((index) => (
+            <Card key={index} className="bg-card/85 shadow-sm">
               <CardContent className="grid gap-3 pt-5">
                 <Skeleton className="h-4 w-16" />
                 <Skeleton className="h-8 w-12" />
@@ -373,8 +419,8 @@ export function AgentsView() {
           ))}
         </div>
         <div className="grid gap-4 lg:grid-cols-2">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} className="h-32 w-full" />
+          {[1, 2, 3, 4].map((index) => (
+            <Skeleton key={index} className="h-40 w-full" />
           ))}
         </div>
       </div>
@@ -383,6 +429,12 @@ export function AgentsView() {
 
   return (
     <div className="space-y-6">
+      {error ? (
+        <div className="rounded-2xl border border-destructive/20 bg-destructive/5 p-4 text-sm text-destructive">
+          {error}
+        </div>
+      ) : null}
+
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground">
@@ -413,9 +465,9 @@ export function AgentsView() {
         </Card>
         <Card className="bg-card/85 shadow-sm">
           <CardContent className="grid gap-3 pt-5">
-            <Badge variant="outline">Pausados</Badge>
-            <p className="font-serif text-3xl tracking-tight text-amber-600">
-              {agentsByStatus.paused}
+            <Badge variant="outline">Inativos</Badge>
+            <p className="font-serif text-3xl tracking-tight text-muted-foreground">
+              {agentsByStatus.inactive}
             </p>
           </CardContent>
         </Card>
@@ -444,19 +496,15 @@ export function AgentsView() {
               </EmptyMedia>
               <EmptyTitle>Nenhum agent configurado</EmptyTitle>
               <EmptyDescription>
-                Crie seu primeiro agent de IA para automatizar conversas.
+                Crie o primeiro especialista do workspace para atuar nas
+                conversas do inbox.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {agents.map((agent) => (
-              <AgentCard
-                key={agent.id}
-                agent={agent}
-                onUpdated={loadAgents}
-                onDeleted={loadAgents}
-              />
+              <AgentCard key={agent.id} agent={agent} onUpdated={loadAgents} />
             ))}
           </div>
         )}

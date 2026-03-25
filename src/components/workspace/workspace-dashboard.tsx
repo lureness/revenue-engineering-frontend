@@ -159,7 +159,7 @@ export function WorkspaceDashboard({ tenantSlug }: WorkspaceDashboardProps) {
         value={data?.agentsCount ?? 0}
         description="Agentes configurados"
         icon={Bot}
-        href={`${basePath}/agents`}
+        href={`${basePath}/inbox/agents`}
       />
       <MetricCard
         label="Surveys"
