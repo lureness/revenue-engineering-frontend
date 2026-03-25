@@ -4,6 +4,7 @@ import {
   ArrowRight,
   CheckCircle2,
   ChevronLeft,
+  ExternalLink,
   Loader2,
   Lock,
   Mail,
@@ -12,7 +13,7 @@ import {
   TrendingUp,
   TriangleAlert,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   type ReactNode,
   useCallback,
@@ -70,6 +71,7 @@ import type {
 } from "@/lib/surveys/types";
 import {
   buildPublicSurveyResumePath,
+  buildTypebotViewerUrl,
   getCurrentSurveyQuestion,
   getQuestionNumber,
   getSelectedOptionId,
@@ -219,6 +221,7 @@ export function PublicSurveyFlow({
   initialPublicToken = null,
 }: PublicSurveyFlowProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [template, setTemplate] = useState<PublicSurveyTemplateItem | null>(
     null,
   );
@@ -276,7 +279,11 @@ export function PublicSurveyFlow({
 
         setTemplate(nextTemplate);
 
-        if (initialSubmissionId && initialPublicToken) {
+        if (
+          nextTemplate.engine !== "typebot" &&
+          initialSubmissionId &&
+          initialPublicToken
+        ) {
           const nextSubmission = await getPublicSurveySubmission(
             initialSubmissionId,
             initialPublicToken,
@@ -333,6 +340,31 @@ export function PublicSurveyFlow({
 
     return getCurrentSurveyQuestion(template, submission);
   }, [submission, template]);
+
+  const typebotViewerUrl = useMemo(() => {
+    if (
+      !template ||
+      template.engine !== "typebot" ||
+      !template.typebot_public_url
+    ) {
+      return null;
+    }
+
+    const forwardedParams = new URLSearchParams();
+
+    for (const [key, value] of searchParams.entries()) {
+      if (!value.trim() || key === "submission" || key === "token") {
+        continue;
+      }
+
+      forwardedParams.set(key, value);
+    }
+
+    return buildTypebotViewerUrl({
+      publicUrl: template.typebot_public_url,
+      searchParams: forwardedParams,
+    });
+  }, [searchParams, template]);
 
   const currentQuestionNumber = useMemo(() => {
     if (!template) {
@@ -499,6 +531,78 @@ export function PublicSurveyFlow({
               </EmptyDescription>
             </EmptyHeader>
           </Empty>
+        </div>
+      </SurveySurface>
+    );
+  }
+
+  if (template.engine === "typebot") {
+    return (
+      <SurveySurface>
+        <div className="grid w-full max-w-6xl gap-6">
+          <div className="mx-auto max-w-3xl space-y-4 text-center">
+            <Badge variant="secondary" className="rounded-full px-4 py-1.5">
+              <Sparkles className="mr-2 size-4" />
+              Typebot self-hosted
+            </Badge>
+            <h1 className="font-serif text-4xl tracking-tight text-foreground md:text-6xl">
+              {template.name}
+            </h1>
+            <p className="text-base leading-8 text-muted-foreground md:text-lg">
+              {template.description}
+            </p>
+          </div>
+
+          {typebotViewerUrl ? (
+            <Card className="surface-panel-strong overflow-hidden rounded-[2rem] p-0">
+              <CardHeader className="flex flex-row items-center justify-between gap-4 border-b border-border/60 px-6 py-5">
+                <div className="space-y-1">
+                  <CardTitle className="text-xl font-semibold tracking-tight text-foreground">
+                    Survey publico
+                  </CardTitle>
+                  <CardDescription>
+                    A experiencia esta sendo executada pelo Typebot e exposta
+                    pela rota publica do Lureness.
+                  </CardDescription>
+                </div>
+                <Button
+                  variant="outline"
+                  className="rounded-full px-5"
+                  onClick={() =>
+                    window.open(
+                      typebotViewerUrl,
+                      "_blank",
+                      "noopener,noreferrer",
+                    )
+                  }
+                >
+                  <ExternalLink className="size-4" />
+                  Abrir direto no Typebot
+                </Button>
+              </CardHeader>
+              <CardContent className="p-0">
+                <iframe
+                  src={typebotViewerUrl}
+                  title={template.name}
+                  className="block h-[calc(100vh-16rem)] min-h-[720px] w-full border-0 bg-background"
+                  allow="clipboard-write; microphone"
+                />
+              </CardContent>
+            </Card>
+          ) : (
+            <Empty className="surface-panel-strong rounded-[2rem] bg-card shadow-md">
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <TriangleAlert className="size-4" />
+                </EmptyMedia>
+                <EmptyTitle>Survey Typebot sem publicacao valida</EmptyTitle>
+                <EmptyDescription>
+                  Este survey foi cadastrado, mas ainda nao tem uma URL publica
+                  do Typebot pronta para exibicao.
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          )}
         </div>
       </SurveySurface>
     );

@@ -3,6 +3,18 @@ function normalizeBaseUrl(value: string | undefined) {
   return (value?.trim() || fallback).replace(/\/+$/, "");
 }
 
+function normalizeOptionalUrl(value: string | undefined) {
+  const normalized = value?.trim();
+  if (!normalized) {
+    return "";
+  }
+
+  return normalized.replace(/\/+$/, "");
+}
+
 export const publicEnv = {
   apiBaseUrl: normalizeBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL),
+  typebotBuilderUrl: normalizeOptionalUrl(
+    process.env.NEXT_PUBLIC_TYPEBOT_BUILDER_URL,
+  ),
 } as const;

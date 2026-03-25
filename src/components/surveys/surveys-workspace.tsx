@@ -4,7 +4,9 @@ import {
   Copy,
   ExternalLink,
   FileText,
+  Layers3,
   Loader2,
+  Plus,
   Rocket,
   Sparkles,
 } from "lucide-react";
@@ -24,6 +26,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import {
   Empty,
   EmptyDescription,
   EmptyHeader,
@@ -37,16 +48,10 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { toast } from "@/components/ui/sonner";
 import { Textarea } from "@/components/ui/textarea";
 import { formatApiErrorMessage } from "@/lib/api/error-messages";
+import { publicEnv } from "@/lib/env";
 import { formatDateTime } from "@/lib/observability/format";
 import {
   TENANT_SURVEYS_MANAGE_PERMISSION,
@@ -54,33 +59,46 @@ import {
 } from "@/lib/rbac/permissions";
 import {
   bootstrapIerSurveyTemplate,
+  createTypebotSurveyTemplate,
   getSurveyTemplates,
 } from "@/lib/surveys/api";
 import type { SurveyTemplateItem } from "@/lib/surveys/types";
-import {
-  buildPublicSurveyPath,
-  buildPublicSurveyUrl,
-  buildSurveyIframeSnippet,
-} from "@/lib/surveys/utils";
+import { buildPublicSurveyPath } from "@/lib/surveys/utils";
 import { cn } from "@/lib/utils";
 
-type SurveyAttributionFormState = {
-  utm_source: string;
-  utm_medium: string;
-  utm_campaign: string;
-  utm_term: string;
-  utm_content: string;
-  iframe_height: string;
+type CreateTypebotFormState = {
+  name: string;
+  slug: string;
+  description: string;
+  typebot_public_id: string;
+  typebot_typebot_id: string;
+  typebot_edit_url: string;
 };
 
-const INITIAL_ATTRIBUTION_FORM: SurveyAttributionFormState = {
-  utm_source: "",
-  utm_medium: "",
-  utm_campaign: "",
-  utm_term: "",
-  utm_content: "",
-  iframe_height: "1100",
+const INITIAL_TYPEBOT_FORM: CreateTypebotFormState = {
+  name: "",
+  slug: "",
+  description: "",
+  typebot_public_id: "",
+  typebot_typebot_id: "",
+  typebot_edit_url: "",
 };
+
+function normalizeSlug(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 120);
+}
+
+function trimToNull(value: string) {
+  const normalized = value.trim();
+  return normalized ? normalized : null;
+}
 
 function getConfigurationText(
   configuration: SurveyTemplateItem["configuration"],
@@ -91,6 +109,10 @@ function getConfigurationText(
   return typeof value === "string" && value.trim() ? value : fallback;
 }
 
+function getEngineLabel(engine: string) {
+  return engine === "typebot" ? "Typebot" : "Nativo";
+}
+
 export function SurveysWorkspace() {
   const { status: accessStatus, hasTenantPermission } = useAccess();
   const { tenant } = useAuth();
@@ -98,12 +120,12 @@ export function SurveysWorkspace() {
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(
     null,
   );
-  const [attributionForm, setAttributionForm] = useState(
-    INITIAL_ATTRIBUTION_FORM,
-  );
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [typebotForm, setTypebotForm] = useState(INITIAL_TYPEBOT_FORM);
   const [workspaceError, setWorkspaceError] = useState<string | null>(null);
   const [isLoadingTemplates, setIsLoadingTemplates] = useState(true);
   const [isBootstrappingIer, setIsBootstrappingIer] = useState(false);
+  const [isCreatingTypebot, setIsCreatingTypebot] = useState(false);
 
   const canReadSurveys = hasTenantPermission(TENANT_SURVEYS_READ_PERMISSION);
   const canManageSurveys = hasTenantPermission(
@@ -143,7 +165,7 @@ export function SurveysWorkspace() {
         }
 
         const presentation = formatApiErrorMessage(error, {
-          fallbackTitle: "Não foi possível carregar os surveys agora.",
+          fallbackTitle: "Nao foi possivel carregar os surveys agora.",
         });
         setWorkspaceError(presentation.title);
         setTemplates([]);
@@ -161,6 +183,17 @@ export function SurveysWorkspace() {
     };
   }, [accessStatus, canReadSurveys]);
 
+  useEffect(() => {
+    if (
+      selectedTemplateId &&
+      templates.some((template) => template.id === selectedTemplateId)
+    ) {
+      return;
+    }
+
+    setSelectedTemplateId(templates[0]?.id ?? null);
+  }, [selectedTemplateId, templates]);
+
   async function refreshTemplates() {
     if (!canReadSurveys) {
       return;
@@ -174,7 +207,7 @@ export function SurveysWorkspace() {
       setTemplates(nextTemplates);
     } catch (error) {
       const presentation = formatApiErrorMessage(error, {
-        fallbackTitle: "Não foi possível carregar os surveys agora.",
+        fallbackTitle: "Nao foi possivel carregar os surveys agora.",
       });
       setWorkspaceError(presentation.title);
       setTemplates([]);
@@ -188,7 +221,6 @@ export function SurveysWorkspace() {
 
     try {
       const template = await bootstrapIerSurveyTemplate();
-
       setTemplates((currentTemplates) => {
         const exists = currentTemplates.some((item) => item.id === template.id);
 
@@ -200,11 +232,11 @@ export function SurveysWorkspace() {
 
         return [template, ...currentTemplates];
       });
-
+      setSelectedTemplateId(template.id);
       toast.success("Template IER instalado com sucesso.");
     } catch (error) {
       const presentation = formatApiErrorMessage(error, {
-        fallbackTitle: "Não foi possível instalar o template IER agora.",
+        fallbackTitle: "Nao foi possivel instalar o template IER agora.",
       });
 
       toast.error(presentation.title, {
@@ -219,9 +251,46 @@ export function SurveysWorkspace() {
     }
   }
 
+  async function handleCreateTypebotTemplate(
+    event: React.FormEvent<HTMLFormElement>,
+  ) {
+    event.preventDefault();
+    setIsCreatingTypebot(true);
+
+    try {
+      const template = await createTypebotSurveyTemplate({
+        slug: normalizeSlug(typebotForm.slug || typebotForm.name),
+        name: typebotForm.name.trim(),
+        description: trimToNull(typebotForm.description),
+        typebot_public_id: trimToNull(typebotForm.typebot_public_id),
+        typebot_typebot_id: trimToNull(typebotForm.typebot_typebot_id),
+        typebot_edit_url: trimToNull(typebotForm.typebot_edit_url),
+        configuration: {
+          entry_badge: "Typebot self-hosted",
+        },
+        is_published: true,
+      });
+
+      setTemplates((currentTemplates) => [template, ...currentTemplates]);
+      setSelectedTemplateId(template.id);
+      setTypebotForm(INITIAL_TYPEBOT_FORM);
+      setIsCreateDialogOpen(false);
+      toast.success("Survey Typebot criado no workspace.");
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Nao foi possivel criar o survey Typebot agora.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
+    } finally {
+      setIsCreatingTypebot(false);
+    }
+  }
+
   async function handleCopyPublicLink(template: SurveyTemplateItem) {
     if (!tenant) {
-      toast.error("Não foi possível montar o link público deste survey.");
+      toast.error("Nao foi possivel montar o link publico deste survey.");
       return;
     }
 
@@ -233,78 +302,32 @@ export function SurveysWorkspace() {
 
     try {
       await navigator.clipboard.writeText(publicUrl);
-      toast.success("Link público copiado.");
+      toast.success("Link publico copiado.");
     } catch {
-      toast.error("Não foi possível copiar o link agora.");
+      toast.error("Nao foi possivel copiar o link agora.");
     }
   }
 
-  async function copyText(value: string, successMessage: string) {
-    if (!value.trim()) {
-      toast.error("Não há conteúdo para copiar ainda.");
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(value);
-      toast.success(successMessage);
-    } catch {
-      toast.error("Não foi possível copiar agora.");
-    }
-  }
+  const selectedTemplate = useMemo(() => {
+    return (
+      templates.find((template) => template.id === selectedTemplateId) ??
+      templates[0] ??
+      null
+    );
+  }, [selectedTemplateId, templates]);
 
   const publishedTemplates = useMemo(
     () => templates.filter((template) => template.is_published).length,
     [templates],
   );
+  const typebotTemplates = useMemo(
+    () => templates.filter((template) => template.engine === "typebot").length,
+    [templates],
+  );
 
-  const latestTemplate = templates[0] ?? null;
-  const latestTemplateUpdatedAt = latestTemplate
-    ? formatDateTime(latestTemplate.updated_at)
+  const selectedTemplateUpdatedAt = selectedTemplate
+    ? formatDateTime(selectedTemplate.updated_at)
     : "Nenhum survey criado";
-  const ierTemplate =
-    templates.find((template) => template.code === "ier") ?? null;
-  const selectedTemplate =
-    templates.find((template) => template.id === selectedTemplateId) ??
-    ierTemplate ??
-    templates[0] ??
-    null;
-  const currentOrigin =
-    typeof window !== "undefined" ? window.location.origin : "";
-  const generatedPublicUrl =
-    tenant && selectedTemplate && currentOrigin
-      ? buildPublicSurveyUrl({
-          origin: currentOrigin,
-          tenantSlug: tenant.slug,
-          surveySlug: selectedTemplate.slug,
-          attribution: {
-            utm_source: attributionForm.utm_source,
-            utm_medium: attributionForm.utm_medium,
-            utm_campaign: attributionForm.utm_campaign,
-            utm_term: attributionForm.utm_term,
-            utm_content: attributionForm.utm_content,
-          },
-        })
-      : "";
-  const generatedIframeSnippet =
-    generatedPublicUrl && selectedTemplate
-      ? buildSurveyIframeSnippet({
-          publicUrl: generatedPublicUrl,
-          title: selectedTemplate.name,
-          height: attributionForm.iframe_height,
-        })
-      : "";
-
-  useEffect(() => {
-    if (
-      selectedTemplateId &&
-      templates.some((template) => template.id === selectedTemplateId)
-    ) {
-      return;
-    }
-
-    setSelectedTemplateId(templates[0]?.id ?? null);
-  }, [selectedTemplateId, templates]);
 
   if (accessStatus === "loading") {
     return (
@@ -328,8 +351,8 @@ export function SurveysWorkspace() {
           </EmptyMedia>
           <EmptyTitle>Surveys bloqueados neste workspace</EmptyTitle>
           <EmptyDescription>
-            Você não tem permissão para visualizar ou gerenciar templates de
-            diagnóstico neste workspace.
+            Voce nao tem permissao para visualizar ou gerenciar surveys neste
+            workspace.
           </EmptyDescription>
         </EmptyHeader>
       </Empty>
@@ -338,530 +361,526 @@ export function SurveysWorkspace() {
 
   return (
     <div className="grid gap-6">
-      <div className="grid gap-4 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="glow-border rounded-[1.8rem] bg-card shadow-md">
-          <CardHeader className="gap-3">
-            <div className="space-y-3">
-              <Badge variant="secondary" className="w-fit">
-                Próximo motor de aquisição
-              </Badge>
-              <CardTitle className="font-serif text-3xl tracking-tight text-foreground">
-                Surveys públicos para capturar lead, gerar diagnóstico e abrir
-                conversa no produto.
-              </CardTitle>
-              <CardDescription className="max-w-2xl leading-7">
-                O primeiro survey oficial do workspace é o IER. Ele já nasce
-                integrado ao backend com scoring, relatório parcial, unlock do
-                relatório completo e vínculo com contatos.
-              </CardDescription>
-            </div>
-            <CardAction>
-              {canManageSurveys ? (
-                <Button
-                  onClick={handleBootstrapIer}
-                  disabled={Boolean(ierTemplate) || isBootstrappingIer}
-                  className="rounded-full px-5"
-                >
-                  {isBootstrappingIer ? (
-                    <>
-                      <Loader2 className="size-4 animate-spin" />
-                      Instalando...
-                    </>
-                  ) : ierTemplate ? (
-                    <>
-                      <Sparkles className="size-4" />
-                      IER instalado
-                    </>
-                  ) : (
-                    <>
-                      <Rocket className="size-4" />
-                      Criar survey IER
-                    </>
-                  )}
-                </Button>
-              ) : null}
-            </CardAction>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card size="sm" className="rounded-[1.4rem] bg-background/85">
-                <CardContent className="grid gap-2 pt-4">
-                  <Badge variant="secondary" className="w-fit">
-                    Templates ativos
-                  </Badge>
-                  <p className="font-serif text-4xl tracking-tight text-foreground">
-                    {templates.length}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card size="sm" className="rounded-[1.4rem] bg-background/85">
-                <CardContent className="grid gap-2 pt-4">
-                  <Badge variant="secondary" className="w-fit">
-                    Publicados
-                  </Badge>
-                  <p className="font-serif text-4xl tracking-tight text-foreground">
-                    {publishedTemplates}
-                  </p>
-                </CardContent>
-              </Card>
-              <Card size="sm" className="rounded-[1.4rem] bg-background/85">
-                <CardContent className="grid gap-2 pt-4">
-                  <Badge variant="secondary" className="w-fit">
-                    Última atualização
-                  </Badge>
-                  <p className="text-sm leading-6 text-muted-foreground">
-                    {latestTemplateUpdatedAt}
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              {[
-                "Captura inicial com e-mail e WhatsApp.",
-                "Quiz em 5 etapas com progresso visual.",
-                "Diagnóstico parcial com score e perfil.",
-                "Unlock do relatório completo com enriquecimento do lead.",
-              ].map((feature) => (
-                <div
-                  key={feature}
-                  className="rounded-[1.25rem] border border-border/70 bg-background/85 px-4 py-3 text-sm leading-6 text-muted-foreground"
-                >
-                  {feature}
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-card/85 shadow-sm">
-          <CardHeader>
+      <Card className="glow-border rounded-[1.8rem] bg-card shadow-md">
+        <CardHeader className="gap-3">
+          <div className="space-y-3">
             <Badge variant="secondary" className="w-fit">
-              Template padrão
+              Engine de surveys
             </Badge>
-            <CardTitle className="text-xl font-semibold tracking-tight text-foreground">
-              Índice de Eficiência de Receita
+            <CardTitle className="font-serif text-3xl tracking-tight text-foreground">
+              Typebot self-hosted como motor de captura, diagnostico e
+              distribuicao.
             </CardTitle>
-            <CardDescription className="leading-7">
-              O IER é o ponto de partida do motor de tráfego pago: captura,
-              diagnostica, qualifica e cria o contexto comercial para os
-              próximos domínios.
+            <CardDescription className="max-w-2xl leading-7">
+              O Lureness passa a catalogar e publicar surveys do workspace,
+              enquanto a construcao do fluxo fica no Typebot self-hosted, com
+              possibilidade de manter surveys nativos legados como o IER.
             </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="rounded-[1.4rem] border border-border/70 bg-background/85 p-5">
-              <div className="space-y-2">
-                <Badge variant="secondary">
-                  {ierTemplate
-                    ? getConfigurationText(
-                        ierTemplate.configuration,
-                        "entry_badge",
-                        "Diagnóstico gratuito",
-                      )
-                    : "Diagnóstico gratuito"}
-                </Badge>
-                <p className="font-serif text-3xl leading-none tracking-tight text-foreground">
-                  {ierTemplate
-                    ? getConfigurationText(
-                        ierTemplate.configuration,
-                        "entry_title",
-                        "Índice de Eficiência de Receita",
-                      )
-                    : "Índice de Eficiência de Receita"}
-                </p>
-                <p className="text-sm leading-7 text-muted-foreground">
-                  {ierTemplate
-                    ? getConfigurationText(
-                        ierTemplate.configuration,
-                        "entry_subtitle",
-                        "Descubra se sua operação está construindo patrimônio ou apenas queimando margem para crescer.",
-                      )
-                    : "Descubra se sua operação está construindo patrimônio ou apenas queimando margem para crescer."}
-                </p>
-              </div>
-            </div>
+          </div>
+          <CardAction className="flex flex-wrap gap-3">
+            {canManageSurveys ? (
+              <Dialog
+                open={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
+              >
+                <DialogTrigger
+                  render={
+                    <Button className="rounded-full px-5">
+                      <Plus className="size-4" />
+                      Criar novo
+                    </Button>
+                  }
+                />
+                <DialogContent className="sm:max-w-2xl">
+                  <form
+                    className="grid gap-5"
+                    onSubmit={handleCreateTypebotTemplate}
+                  >
+                    <DialogHeader>
+                      <Badge variant="secondary" className="w-fit">
+                        Criacao no workspace
+                      </Badge>
+                      <DialogTitle className="text-xl font-semibold tracking-tight text-foreground">
+                        Criar survey Typebot
+                      </DialogTitle>
+                      <DialogDescription className="leading-7">
+                        Se `publicId` e URL de edicao ficarem vazios, o backend
+                        cria o bot no Typebot via API e registra tudo no
+                        workspace. Se quiser, voce ainda pode informar esses
+                        dados manualmente para vincular um bot ja existente.
+                      </DialogDescription>
+                    </DialogHeader>
 
-            {ierTemplate && tenant ? (
-              <div className="rounded-[1.4rem] border border-border/70 bg-background/85 p-4">
-                <p className="eyebrow mb-3">Link público</p>
-                <div className="rounded-2xl border border-border/70 bg-card/85 px-4 py-3 font-mono text-xs text-muted-foreground">
-                  {buildPublicSurveyPath(tenant.slug, ierTemplate.slug)}
-                </div>
-              </div>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Field>
+                        <FieldLabel>Nome do survey</FieldLabel>
+                        <FieldContent>
+                          <Input
+                            value={typebotForm.name}
+                            onChange={(event) =>
+                              setTypebotForm((currentValue) => ({
+                                ...currentValue,
+                                name: event.target.value,
+                              }))
+                            }
+                            className="h-11 rounded-2xl"
+                            placeholder="Diagnostico comercial"
+                          />
+                        </FieldContent>
+                      </Field>
+
+                      <Field>
+                        <FieldLabel>Slug publico</FieldLabel>
+                        <FieldContent>
+                          <Input
+                            value={typebotForm.slug}
+                            onChange={(event) =>
+                              setTypebotForm((currentValue) => ({
+                                ...currentValue,
+                                slug: normalizeSlug(event.target.value),
+                              }))
+                            }
+                            onBlur={() => {
+                              if (
+                                !typebotForm.slug.trim() &&
+                                typebotForm.name.trim()
+                              ) {
+                                setTypebotForm((currentValue) => ({
+                                  ...currentValue,
+                                  slug: normalizeSlug(currentValue.name),
+                                }));
+                              }
+                            }}
+                            className="h-11 rounded-2xl"
+                            placeholder="diagnostico-comercial"
+                          />
+                        </FieldContent>
+                      </Field>
+                    </div>
+
+                    <Field>
+                      <FieldLabel>Descricao</FieldLabel>
+                      <FieldContent>
+                        <Textarea
+                          value={typebotForm.description}
+                          onChange={(event) =>
+                            setTypebotForm((currentValue) => ({
+                              ...currentValue,
+                              description: event.target.value,
+                            }))
+                          }
+                          className="min-h-24 rounded-[1.5rem]"
+                          placeholder="Promessa do diagnostico, contexto da campanha e posicionamento do survey."
+                        />
+                      </FieldContent>
+                    </Field>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Field>
+                        <FieldLabel>Typebot Public ID</FieldLabel>
+                        <FieldContent>
+                          <Input
+                            value={typebotForm.typebot_public_id}
+                            onChange={(event) =>
+                              setTypebotForm((currentValue) => ({
+                                ...currentValue,
+                                typebot_public_id: event.target.value,
+                              }))
+                            }
+                            className="h-11 rounded-2xl"
+                            placeholder="clx123publicid"
+                          />
+                        </FieldContent>
+                        <FieldDescription>
+                          Opcional. Se ficar vazio, o Typebot cria e devolve
+                          esse ID.
+                        </FieldDescription>
+                      </Field>
+
+                      <Field>
+                        <FieldLabel>Typebot ID</FieldLabel>
+                        <FieldContent>
+                          <Input
+                            value={typebotForm.typebot_typebot_id}
+                            onChange={(event) =>
+                              setTypebotForm((currentValue) => ({
+                                ...currentValue,
+                                typebot_typebot_id: event.target.value,
+                              }))
+                            }
+                            className="h-11 rounded-2xl"
+                            placeholder="typebot_123"
+                          />
+                        </FieldContent>
+                        <FieldDescription>
+                          Opcional, para referencia interna.
+                        </FieldDescription>
+                      </Field>
+                    </div>
+
+                    <Field>
+                      <FieldLabel>URL de edicao do Typebot</FieldLabel>
+                      <FieldContent>
+                        <Input
+                          value={typebotForm.typebot_edit_url}
+                          onChange={(event) =>
+                            setTypebotForm((currentValue) => ({
+                              ...currentValue,
+                              typebot_edit_url: event.target.value,
+                            }))
+                          }
+                          className="h-11 rounded-2xl"
+                          placeholder="http://localhost:18080/typebots/typebot_123/edit"
+                        />
+                      </FieldContent>
+                      <FieldDescription>
+                        Opcional para vinculo manual. Na criacao automatica ela
+                        volta pronta da API.
+                      </FieldDescription>
+                    </Field>
+
+                    <DialogFooter className="-mx-0 -mb-0 rounded-none border-0 bg-transparent p-0 pt-1 sm:justify-end">
+                      <Button
+                        type="submit"
+                        disabled={isCreatingTypebot || !typebotForm.name.trim()}
+                        className="rounded-full px-5"
+                      >
+                        {isCreatingTypebot ? (
+                          <>
+                            <Loader2 className="size-4 animate-spin" />
+                            Criando...
+                          </>
+                        ) : (
+                          <>
+                            <Plus className="size-4" />
+                            Criar survey no Typebot
+                          </>
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
             ) : null}
-          </CardContent>
-        </Card>
-      </div>
 
-      {selectedTemplate && tenant ? (
-        <Card className="bg-card/85 shadow-sm">
-          <CardHeader>
-            <Badge variant="secondary" className="w-fit">
-              Kit de divulgação
-            </Badge>
-            <CardTitle className="text-2xl font-semibold tracking-tight text-foreground">
-              Monte o link público com UTM e copie o iframe
-            </CardTitle>
-            <CardDescription className="leading-7">
-              Gere uma URL pronta para Meta Ads, tráfego pago e parceiros. Se
-              precisar embutir o diagnóstico em uma landing page, copie também o
-              snippet de iframe.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-5">
-            <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
-              <div className="grid gap-4">
-                <Field>
-                  <FieldLabel>Survey publicado</FieldLabel>
-                  <FieldContent>
-                    <Select
-                      value={selectedTemplate.id}
-                      onValueChange={(value) => setSelectedTemplateId(value)}
-                    >
-                      <SelectTrigger className="h-11 w-full rounded-2xl px-4">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {templates.map((template) => (
-                          <SelectItem key={template.id} value={template.id}>
-                            {template.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </FieldContent>
-                </Field>
+            {publicEnv.typebotBuilderUrl ? (
+              <Link
+                href={publicEnv.typebotBuilderUrl}
+                target="_blank"
+                rel="noreferrer"
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "rounded-full px-5",
+                )}
+              >
+                <ExternalLink className="size-4" />
+                Abrir Typebot
+              </Link>
+            ) : null}
 
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field>
-                    <FieldLabel>UTM Source</FieldLabel>
-                    <FieldContent>
-                      <Input
-                        value={attributionForm.utm_source}
-                        onChange={(event) =>
-                          setAttributionForm((currentValue) => ({
-                            ...currentValue,
-                            utm_source: event.target.value,
-                          }))
-                        }
-                        className="h-11 rounded-2xl"
-                        placeholder="meta"
-                      />
-                    </FieldContent>
-                  </Field>
-
-                  <Field>
-                    <FieldLabel>UTM Medium</FieldLabel>
-                    <FieldContent>
-                      <Input
-                        value={attributionForm.utm_medium}
-                        onChange={(event) =>
-                          setAttributionForm((currentValue) => ({
-                            ...currentValue,
-                            utm_medium: event.target.value,
-                          }))
-                        }
-                        className="h-11 rounded-2xl"
-                        placeholder="paid-social"
-                      />
-                    </FieldContent>
-                  </Field>
-
-                  <Field>
-                    <FieldLabel>UTM Campaign</FieldLabel>
-                    <FieldContent>
-                      <Input
-                        value={attributionForm.utm_campaign}
-                        onChange={(event) =>
-                          setAttributionForm((currentValue) => ({
-                            ...currentValue,
-                            utm_campaign: event.target.value,
-                          }))
-                        }
-                        className="h-11 rounded-2xl"
-                        placeholder="ier-q2"
-                      />
-                    </FieldContent>
-                  </Field>
-
-                  <Field>
-                    <FieldLabel>UTM Content</FieldLabel>
-                    <FieldContent>
-                      <Input
-                        value={attributionForm.utm_content}
-                        onChange={(event) =>
-                          setAttributionForm((currentValue) => ({
-                            ...currentValue,
-                            utm_content: event.target.value,
-                          }))
-                        }
-                        className="h-11 rounded-2xl"
-                        placeholder="criativo-a"
-                      />
-                    </FieldContent>
-                  </Field>
-
-                  <Field>
-                    <FieldLabel>UTM Term</FieldLabel>
-                    <FieldContent>
-                      <Input
-                        value={attributionForm.utm_term}
-                        onChange={(event) =>
-                          setAttributionForm((currentValue) => ({
-                            ...currentValue,
-                            utm_term: event.target.value,
-                          }))
-                        }
-                        className="h-11 rounded-2xl"
-                        placeholder="diagnostico-receita"
-                      />
-                    </FieldContent>
-                  </Field>
-
-                  <Field>
-                    <FieldLabel>Altura do iframe</FieldLabel>
-                    <FieldContent>
-                      <Input
-                        value={attributionForm.iframe_height}
-                        onChange={(event) =>
-                          setAttributionForm((currentValue) => ({
-                            ...currentValue,
-                            iframe_height: event.target.value,
-                          }))
-                        }
-                        className="h-11 rounded-2xl"
-                        placeholder="1100"
-                      />
-                    </FieldContent>
-                    <FieldDescription>
-                      Ajuste esse valor para o tamanho da sua landing page.
-                    </FieldDescription>
-                  </Field>
-                </div>
-              </div>
-
-              <div className="grid gap-4">
-                <Field>
-                  <FieldLabel>Link público com UTM</FieldLabel>
-                  <FieldContent>
-                    <Textarea
-                      value={generatedPublicUrl}
-                      readOnly
-                      className="min-h-28 rounded-[1.5rem] bg-background/85 font-mono text-xs leading-6"
-                    />
-                  </FieldContent>
-                </Field>
-
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    className="rounded-full px-5"
-                    onClick={() =>
-                      void copyText(generatedPublicUrl, "Link com UTM copiado.")
-                    }
-                    disabled={!generatedPublicUrl}
-                  >
-                    <Copy className="size-4" />
-                    Copiar link com UTM
-                  </Button>
-                  <Link
-                    href={generatedPublicUrl || "#"}
-                    target="_blank"
-                    rel="noreferrer"
-                    className={cn(
-                      buttonVariants({ variant: "outline" }),
-                      "rounded-full px-5",
-                      !generatedPublicUrl && "pointer-events-none opacity-50",
-                    )}
-                  >
-                    <ExternalLink className="size-4" />
-                    Abrir prévia
-                  </Link>
-                </div>
-
-                <Field>
-                  <FieldLabel>Snippet de iframe</FieldLabel>
-                  <FieldContent>
-                    <Textarea
-                      value={generatedIframeSnippet}
-                      readOnly
-                      className="min-h-52 rounded-[1.5rem] bg-background/85 font-mono text-xs leading-6"
-                    />
-                  </FieldContent>
-                  <FieldDescription>
-                    Recurso extra para embedar o survey em uma landing page.
-                  </FieldDescription>
-                </Field>
-
-                <div className="flex flex-wrap gap-3">
-                  <Button
-                    variant="outline"
-                    className="rounded-full px-5"
-                    onClick={() =>
-                      void copyText(
-                        generatedIframeSnippet,
-                        "Snippet de iframe copiado.",
-                      )
-                    }
-                    disabled={!generatedIframeSnippet}
-                  >
-                    <Copy className="size-4" />
-                    Copiar iframe
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    className="rounded-full px-5"
-                    onClick={() => setAttributionForm(INITIAL_ATTRIBUTION_FORM)}
-                  >
-                    Limpar UTMs
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <Card className="bg-card/85 shadow-sm">
-        <CardHeader>
-          <Badge variant="secondary" className="w-fit">
-            Surveys do workspace
-          </Badge>
-          <CardTitle className="text-2xl font-semibold tracking-tight text-foreground">
-            Templates publicados e criação
-          </CardTitle>
-          <CardDescription className="leading-7">
-            Instale o IER agora e use o link público para campanhas, páginas de
-            aquisição e experimentos de diagnóstico.
-          </CardDescription>
+            {canManageSurveys ? (
+              <Button
+                onClick={handleBootstrapIer}
+                disabled={isBootstrappingIer}
+                className="rounded-full px-5"
+              >
+                {isBootstrappingIer ? (
+                  <>
+                    <Loader2 className="size-4 animate-spin" />
+                    Instalando...
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="size-4" />
+                    Instalar IER nativo
+                  </>
+                )}
+              </Button>
+            ) : null}
+          </CardAction>
         </CardHeader>
         <CardContent className="grid gap-4">
-          {workspaceError ? (
-            <Empty className="border border-border/70 bg-background/80">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <FileText className="size-4" />
-                </EmptyMedia>
-                <EmptyTitle>Não foi possível carregar os surveys</EmptyTitle>
-                <EmptyDescription>{workspaceError}</EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : isLoadingTemplates ? (
-            <div className="flex min-h-[220px] items-center justify-center rounded-[1.5rem] border border-border/70 bg-background/85">
-              <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                <Loader2 className="size-4 animate-spin" />
-                Carregando templates...
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card size="sm" className="rounded-[1.4rem] bg-background/85">
+              <CardContent className="grid gap-2 pt-4">
+                <Badge variant="secondary" className="w-fit">
+                  Total
+                </Badge>
+                <p className="font-serif text-4xl tracking-tight text-foreground">
+                  {templates.length}
+                </p>
+              </CardContent>
+            </Card>
+            <Card size="sm" className="rounded-[1.4rem] bg-background/85">
+              <CardContent className="grid gap-2 pt-4">
+                <Badge variant="secondary" className="w-fit">
+                  Publicados
+                </Badge>
+                <p className="font-serif text-4xl tracking-tight text-foreground">
+                  {publishedTemplates}
+                </p>
+              </CardContent>
+            </Card>
+            <Card size="sm" className="rounded-[1.4rem] bg-background/85">
+              <CardContent className="grid gap-2 pt-4">
+                <Badge variant="secondary" className="w-fit">
+                  Typebot
+                </Badge>
+                <p className="font-serif text-4xl tracking-tight text-foreground">
+                  {typebotTemplates}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-2">
+            {[
+              "Crie o fluxo conversacional direto no Typebot self-hosted.",
+              "Publique o survey pela rota publica do Lureness.",
+              "Acesse o editor do Typebot sempre que precisar refinar o fluxo.",
+              "Mantenha surveys nativos legados enquanto migra a operacao.",
+            ].map((feature) => (
+              <div
+                key={feature}
+                className="rounded-[1.25rem] border border-border/70 bg-background/85 px-4 py-3 text-sm leading-6 text-muted-foreground"
+              >
+                {feature}
               </div>
-            </div>
-          ) : templates.length === 0 ? (
-            <Empty className="border border-border/70 bg-background/80">
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <FileText className="size-4" />
-                </EmptyMedia>
-                <EmptyTitle>Nenhum survey criado ainda</EmptyTitle>
-                <EmptyDescription>
-                  {canManageSurveys
-                    ? "Comece instalando o template IER para publicar o primeiro diagnóstico do workspace."
-                    : "Este workspace ainda não publicou surveys disponíveis."}
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          ) : (
-            <div className="grid gap-4 xl:grid-cols-2">
-              {templates.map((template) => {
-                const publicPath =
-                  tenant !== null
-                    ? buildPublicSurveyPath(tenant.slug, template.slug)
-                    : null;
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
-                return (
-                  <Card
-                    key={template.id}
-                    className="rounded-[1.5rem] bg-background/85"
-                  >
-                    <CardHeader className="gap-3">
-                      <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="secondary">
-                            {template.code.toUpperCase()}
-                          </Badge>
-                          <Badge
-                            variant={
-                              template.is_published ? "secondary" : "outline"
-                            }
-                          >
-                            {template.is_published ? "Publicado" : "Rascunho"}
-                          </Badge>
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(320px,0.9fr)] xl:items-start">
+        <Card className="bg-card/85 shadow-sm">
+          <CardHeader>
+            <Badge variant="secondary" className="w-fit">
+              Biblioteca do workspace
+            </Badge>
+            <CardTitle className="text-2xl font-semibold tracking-tight text-foreground">
+              Surveys cadastrados e prontos para distribuicao
+            </CardTitle>
+            <CardDescription className="leading-7">
+              Cada survey continua tendo uma rota publica do Lureness, mas a
+              experiencia pode ser executada pelo Typebot self-hosted.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4">
+            {workspaceError ? (
+              <Empty className="border border-border/70 bg-background/80">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <FileText className="size-4" />
+                  </EmptyMedia>
+                  <EmptyTitle>Nao foi possivel carregar os surveys</EmptyTitle>
+                  <EmptyDescription>{workspaceError}</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : isLoadingTemplates ? (
+              <div className="flex min-h-[220px] items-center justify-center rounded-[1.5rem] border border-border/70 bg-background/85">
+                <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Carregando templates...
+                </div>
+              </div>
+            ) : templates.length === 0 ? (
+              <Empty className="border border-border/70 bg-background/80">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Layers3 className="size-4" />
+                  </EmptyMedia>
+                  <EmptyTitle>Nenhum survey criado ainda</EmptyTitle>
+                  <EmptyDescription>
+                    Registre o primeiro survey Typebot deste workspace ou
+                    instale o IER nativo para manter um template legado ativo.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <div className="grid gap-4">
+                {templates.map((template) => {
+                  const publicPath =
+                    tenant !== null
+                      ? buildPublicSurveyPath(tenant.slug, template.slug)
+                      : null;
+                  const isSelected = template.id === selectedTemplate?.id;
+
+                  return (
+                    <Card
+                      key={template.id}
+                      className={cn(
+                        "cursor-pointer rounded-[1.5rem] bg-background/85 transition-colors",
+                        isSelected &&
+                          "border-foreground/20 ring-1 ring-foreground/15",
+                      )}
+                      onClick={() => setSelectedTemplateId(template.id)}
+                    >
+                      <CardHeader className="gap-3">
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="secondary">
+                              {getEngineLabel(template.engine)}
+                            </Badge>
+                            <Badge
+                              variant={
+                                template.is_published ? "secondary" : "outline"
+                              }
+                            >
+                              {template.is_published ? "Publicado" : "Rascunho"}
+                            </Badge>
+                            <Badge variant="outline">
+                              {template.code.toUpperCase()}
+                            </Badge>
+                          </div>
+                          <CardTitle className="text-xl font-semibold tracking-tight text-foreground">
+                            {template.name}
+                          </CardTitle>
+                          <CardDescription className="leading-7">
+                            {template.description ||
+                              getConfigurationText(
+                                template.configuration,
+                                "entry_subtitle",
+                                "Sem descricao cadastrada ainda.",
+                              )}
+                          </CardDescription>
                         </div>
-                        <CardTitle className="text-xl font-semibold tracking-tight text-foreground">
-                          {template.name}
-                        </CardTitle>
-                        <CardDescription className="leading-7">
-                          {template.description}
-                        </CardDescription>
-                      </div>
-                    </CardHeader>
-                    <CardContent className="grid gap-4">
-                      <div className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
-                        <div className="rounded-[1.2rem] border border-border/70 bg-card/85 px-4 py-3">
-                          <div className="eyebrow mb-2">Slug público</div>
-                          <div className="font-mono text-xs text-foreground">
-                            {template.slug}
+                      </CardHeader>
+                      <CardContent className="grid gap-4">
+                        <div className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
+                          <div className="rounded-[1.2rem] border border-border/70 bg-card/85 px-4 py-3">
+                            <div className="eyebrow mb-2">Slug publico</div>
+                            <div className="font-mono text-xs text-foreground">
+                              {template.slug}
+                            </div>
+                          </div>
+                          <div className="rounded-[1.2rem] border border-border/70 bg-card/85 px-4 py-3">
+                            <div className="eyebrow mb-2">Atualizado em</div>
+                            <div className="text-foreground">
+                              {formatDateTime(template.updated_at)}
+                            </div>
                           </div>
                         </div>
-                        <div className="rounded-[1.2rem] border border-border/70 bg-card/85 px-4 py-3">
-                          <div className="eyebrow mb-2">Atualizado em</div>
-                          <div className="text-foreground">
-                            {formatDateTime(template.updated_at)}
-                          </div>
-                        </div>
-                      </div>
 
-                      {publicPath ? (
-                        <div className="rounded-[1.2rem] border border-border/70 bg-card/85 px-4 py-3">
-                          <div className="eyebrow mb-2">Rota pública</div>
-                          <div className="break-all font-mono text-xs text-muted-foreground">
-                            {publicPath}
+                        {template.engine === "typebot" ? (
+                          <div className="grid gap-3 text-sm text-muted-foreground md:grid-cols-2">
+                            <div className="rounded-[1.2rem] border border-border/70 bg-card/85 px-4 py-3">
+                              <div className="eyebrow mb-2">Public ID</div>
+                              <div className="font-mono text-xs text-foreground">
+                                {template.typebot_public_id || "Nao informado"}
+                              </div>
+                            </div>
+                            <div className="rounded-[1.2rem] border border-border/70 bg-card/85 px-4 py-3">
+                              <div className="eyebrow mb-2">Typebot ID</div>
+                              <div className="font-mono text-xs text-foreground">
+                                {template.typebot_typebot_id || "Nao informado"}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                      ) : null}
+                        ) : null}
 
-                      <div className="flex flex-wrap gap-3">
                         {publicPath ? (
-                          <>
+                          <div className="rounded-[1.2rem] border border-border/70 bg-card/85 px-4 py-3">
+                            <div className="eyebrow mb-2">Rota publica</div>
+                            <div className="break-all font-mono text-xs text-muted-foreground">
+                              {publicPath}
+                            </div>
+                          </div>
+                        ) : null}
+
+                        <div className="flex flex-wrap gap-3">
+                          {publicPath ? (
+                            <>
+                              <Link
+                                href={publicPath}
+                                target="_blank"
+                                rel="noreferrer"
+                                className={cn(
+                                  buttonVariants({ variant: "default" }),
+                                  "rounded-full px-5",
+                                )}
+                              >
+                                <ExternalLink className="size-4" />
+                                Abrir experiencia publica
+                              </Link>
+                              <Button
+                                variant="outline"
+                                className="rounded-full px-5"
+                                onClick={() => handleCopyPublicLink(template)}
+                              >
+                                <Copy className="size-4" />
+                                Copiar link
+                              </Button>
+                            </>
+                          ) : null}
+
+                          {template.typebot_edit_url ? (
                             <Link
-                              href={publicPath}
+                              href={template.typebot_edit_url}
                               target="_blank"
                               rel="noreferrer"
                               className={cn(
-                                buttonVariants({
-                                  variant: "default",
-                                }),
+                                buttonVariants({ variant: "ghost" }),
                                 "rounded-full px-5",
                               )}
                             >
-                              <ExternalLink className="size-4" />
-                              Abrir experiência pública
+                              <Sparkles className="size-4" />
+                              Abrir editor Typebot
                             </Link>
-                            <Button
-                              variant="outline"
-                              className="rounded-full px-5"
-                              onClick={() => handleCopyPublicLink(template)}
-                            >
-                              <Copy className="size-4" />
-                              Copiar link
-                            </Button>
-                          </>
-                        ) : null}
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                          ) : null}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {selectedTemplate ? (
+          <Card className="bg-card/85 shadow-sm xl:sticky xl:top-24">
+            <CardHeader>
+              <Badge variant="secondary" className="w-fit">
+                Contexto do survey
+              </Badge>
+              <CardTitle className="text-xl font-semibold tracking-tight text-foreground">
+                Survey selecionado
+              </CardTitle>
+              <CardDescription className="leading-7">
+                Resumo operacional do survey escolhido para distribuicao.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-3">
+              <div className="rounded-[1.3rem] border border-border/70 bg-background/85 px-4 py-3">
+                <div className="eyebrow mb-2">Engine</div>
+                <div className="text-foreground">
+                  {getEngineLabel(selectedTemplate.engine)}
+                </div>
+              </div>
+              <div className="rounded-[1.3rem] border border-border/70 bg-background/85 px-4 py-3">
+                <div className="eyebrow mb-2">Slug</div>
+                <div className="font-mono text-xs text-foreground">
+                  {tenant
+                    ? buildPublicSurveyPath(tenant.slug, selectedTemplate.slug)
+                    : selectedTemplate.slug}
+                </div>
+              </div>
+              <div className="rounded-[1.3rem] border border-border/70 bg-background/85 px-4 py-3">
+                <div className="eyebrow mb-2">Atualizado</div>
+                <div className="text-foreground">
+                  {selectedTemplateUpdatedAt}
+                </div>
+              </div>
+              <div className="rounded-[1.3rem] border border-border/70 bg-background/85 px-4 py-3">
+                <div className="eyebrow mb-2">Edit URL</div>
+                <div className="break-all text-xs text-muted-foreground">
+                  {selectedTemplate.typebot_edit_url || "Nao informado"}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
+      </div>
     </div>
   );
 }

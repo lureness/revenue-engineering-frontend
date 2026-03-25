@@ -334,30 +334,24 @@ function NavItemComponent({
   const Icon = item.icon;
   const href = item.href.replace("[slug]", slug);
   const isActive = isNavItemActive(pathname, item, slug);
-  const isHero = layout === "hero";
   const isChild = layout === "child";
+  const isTopLevel = !isChild;
   const showToggle = !collapsed && !!item.hasChildren && !!onToggleChildren;
 
   const itemClassName = cn(
-    "group flex transition-all duration-200",
+    "group relative flex w-full transition-all duration-200",
     collapsed
       ? "size-10 items-center justify-center"
-      : isHero
-        ? "items-center gap-4 rounded-xl px-5 py-3.5"
-        : isChild
-          ? "items-center gap-4 rounded-xl px-5 py-3.5"
-          : "items-center gap-3 rounded-xl px-3 py-2.5",
-    isHero
+      : isTopLevel
+        ? "min-h-14 items-center gap-4 rounded-[1.6rem] px-5 py-3.5"
+        : "min-h-12 items-center gap-3.5 rounded-[1.15rem] px-4 py-3",
+    isTopLevel
       ? isActive
-        ? "bg-foreground text-background shadow-lg"
-        : "border border-border/70 bg-card/90 text-foreground shadow-sm hover:border-foreground/15 hover:bg-card"
-      : isChild
-        ? isActive
-          ? "bg-foreground/30 text-foreground"
-          : "text-foreground hover:bg-foreground/45"
-        : isActive
-          ? "bg-foreground text-background"
-          : "text-foreground hover:bg-foreground/90 hover:text-background",
+        ? "border border-foreground bg-foreground text-background shadow-[0_14px_30px_-22px_rgba(0,0,0,0.8)]"
+        : "border border-border/70 bg-card text-foreground shadow-sm hover:border-foreground/10 hover:bg-card/95"
+      : isActive
+        ? "bg-background text-foreground shadow-sm"
+        : "text-foreground hover:bg-background/80",
     isLocked && "opacity-50",
   );
 
@@ -382,8 +376,8 @@ function NavItemComponent({
           className="flex min-w-0 flex-1 items-center gap-4"
           aria-current={isActive ? "page" : undefined}
         >
-          <Icon className={cn("shrink-0", "size-4")} />
-          <span className={cn("flex-1 font-medium", "text-sm")}>
+          <Icon className={cn("size-4 shrink-0")} />
+          <span className="flex-1 truncate font-medium text-sm">
             {item.title}
           </span>
         </Link>
@@ -392,8 +386,8 @@ function NavItemComponent({
           variant="ghost"
           size="icon-sm"
           className={cn(
-            "-mr-2 h-8 w-8 rounded-full text-current hover:bg-background/10 hover:text-current",
-            isHero
+            "-mr-1 h-8 w-8 rounded-full text-current hover:text-current",
+            isActive
               ? "text-background/80 hover:bg-background/10"
               : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
           )}
@@ -412,8 +406,10 @@ function NavItemComponent({
           <Lock
             className={cn(
               "shrink-0",
-              isHero || isChild ? "size-4" : "size-3.5",
-              isHero ? "text-background/70" : "text-muted-foreground",
+              isTopLevel || isChild ? "size-4" : "size-3.5",
+              isActive && isTopLevel
+                ? "text-background/70"
+                : "text-muted-foreground",
             )}
           />
         )}
@@ -422,15 +418,21 @@ function NavItemComponent({
   }
 
   return (
-    <Link href={href} className={itemClassName}>
-      <Icon className={cn("shrink-0", "size-4")} />
-      <span className={cn("flex-1 font-medium", "text-sm")}>{item.title}</span>
+    <Link
+      href={href}
+      className={itemClassName}
+      aria-current={isActive ? "page" : undefined}
+    >
+      <Icon className="size-4 shrink-0" />
+      <span className="flex-1 truncate font-medium text-sm">{item.title}</span>
       {isLocked && (
         <Lock
           className={cn(
             "shrink-0",
-            isHero || isChild ? "size-4" : "size-3.5",
-            isHero ? "text-background/70" : "text-muted-foreground",
+            isTopLevel || isChild ? "size-4" : "size-3.5",
+            isActive && isTopLevel
+              ? "text-background/70"
+              : "text-muted-foreground",
           )}
         />
       )}
@@ -486,14 +488,14 @@ function NavGroupComponent({
 
   if (group.title && parentItem && childItems.length > 0) {
     return (
-      <div className="space-y-3">
-        <div className="px-5 py-1 text-left text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
+      <div className="space-y-2.5">
+        <div className="px-4 py-1 text-left text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
           {group.title}
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-2">
           {isExpanded ? (
-            <div className="isolate flex items-center flex-col space-y-3">
+            <div className="isolate flex flex-col items-center space-y-1.5">
               <div className="relative z-10 w-full">
                 <NavItemComponent
                   item={parentItem}
@@ -506,8 +508,8 @@ function NavGroupComponent({
                   onToggleChildren={() => setIsExpanded(false)}
                 />
               </div>
-              <div className="relative z-0 -mt-5 w-11/12 rounded-b-[1.25rem] bg-secondary/75 p-4">
-                <div className="flex flex-col gap-2">
+              <div className="relative z-0 -mt-3 w-[calc(100%-1.25rem)] rounded-[1.5rem] bg-secondary/70 px-3 pb-3 pt-4">
+                <div className="flex flex-col gap-1.5">
                   {childItems.map((item) => (
                     <NavItemComponent
                       key={item.href}
@@ -536,7 +538,7 @@ function NavGroupComponent({
           )}
 
           {standaloneItems.length > 0 ? (
-            <div className="flex flex-col gap-1">
+            <div className="flex flex-col gap-2">
               {standaloneItems.map((item) => (
                 <NavItemComponent
                   key={item.href}
@@ -555,12 +557,12 @@ function NavGroupComponent({
   }
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-2">
       {group.title && (
         <button
           type="button"
           onClick={() => setIsExpanded(!isExpanded)}
-          className="flex w-full items-center justify-between px-3 py-2 text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground"
+          className="flex w-full items-center justify-between px-4 py-1 text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground"
         >
           <span>{group.title}</span>
           {isExpanded ? (
@@ -571,7 +573,7 @@ function NavGroupComponent({
         </button>
       )}
       {(!group.title || isExpanded) && (
-        <div className={cn("flex flex-col gap-1", group.title ? "" : "")}>
+        <div className="flex flex-col gap-2">
           {visibleItems.map((item) => (
             <NavItemComponent
               key={item.href}

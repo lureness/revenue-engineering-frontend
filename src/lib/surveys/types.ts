@@ -7,7 +7,11 @@ export type SurveyTemplateItem = {
   code: string;
   slug: string;
   name: string;
+  engine: string;
   description: string;
+  typebot_public_id: string | null;
+  typebot_typebot_id: string | null;
+  typebot_edit_url: string | null;
   configuration: SurveyTemplateConfiguration;
   is_published: boolean;
   created_at: string;
@@ -38,9 +42,24 @@ export type PublicSurveyTemplateItem = {
   code: string;
   slug: string;
   name: string;
+  engine: string;
   description: string;
+  typebot_public_id: string | null;
+  typebot_public_url: string | null;
   configuration: SurveyTemplateConfiguration;
   questions: PublicSurveyQuestionItem[];
+};
+
+export type CreateTypebotSurveyTemplatePayload = {
+  code?: string | null;
+  slug: string;
+  name: string;
+  description?: string | null;
+  typebot_public_id?: string | null;
+  typebot_typebot_id?: string | null;
+  typebot_edit_url?: string | null;
+  configuration?: SurveyTemplateConfiguration;
+  is_published?: boolean;
 };
 
 export type SurveySubmissionAnswerItem = {

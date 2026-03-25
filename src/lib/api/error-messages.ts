@@ -184,6 +184,10 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   "survey template already exists for this workspace": {
     title: "O template IER já está instalado neste workspace.",
   },
+  "typebot survey template already exists for this workspace": {
+    title:
+      "Já existe um survey Typebot com esse identificador neste workspace.",
+  },
   "survey template not found": {
     title: "O survey informado não foi encontrado.",
   },
@@ -204,6 +208,19 @@ const DETAIL_MESSAGE_MAP: Record<string, ApiErrorPresentation> = {
   },
   "survey template has no questions": {
     title: "Este survey ainda não tem perguntas configuradas.",
+  },
+  "typebot-managed surveys do not use native submissions": {
+    title: "Esse survey agora é executado pelo Typebot.",
+    description:
+      "Use a experiência pública Typebot em vez do fluxo nativo de submissão.",
+  },
+  "typebot api is not configured": {
+    title: "A integracao com o Typebot ainda nao foi configurada.",
+    description:
+      "Preencha TYPEBOT_BUILDER_URL, TYPEBOT_API_TOKEN e TYPEBOT_WORKSPACE_ID antes de criar surveys automaticamente.",
+  },
+  "typebot api returned an invalid payload": {
+    title: "O Typebot respondeu com um payload invalido.",
   },
   "survey submission is not complete": {
     title: "Responda todas as perguntas antes de gerar o diagnóstico.",

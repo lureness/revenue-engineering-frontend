@@ -1,7 +1,5 @@
+import { SurveysWorkspace } from "@/components/surveys/surveys-workspace";
+
 export default function SurveysPage() {
-  return (
-    <div>
-      <h1>Surveys</h1>
-    </div>
-  );
+  return <SurveysWorkspace />;
 }
