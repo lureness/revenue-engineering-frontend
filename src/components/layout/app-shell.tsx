@@ -6,9 +6,9 @@ import {
   Bot,
   ChevronDown,
   ChevronRight,
-  ChevronUp,
   FileText,
   Inbox,
+  KeyRound,
   Layers3,
   Lock,
   LogOut,
@@ -76,118 +76,125 @@ type NavItem = {
   match: "exact" | "prefix";
   permission?: string;
   hasChildren?: boolean;
-  children?: boolean;
+  childOf?: string;
 };
 
-type NavGroup = {
-  title?: string;
-  items: NavItem[];
-};
-
-const navigationGroups: NavGroup[] = [
+const navigationItems: NavItem[] = [
   {
-    items: [
-      {
-        title: "Dashboard",
-        href: "/workspace/[slug]",
-        icon: Layers3,
-        match: "exact",
-        permission: TENANT_METRICS_READ_PERMISSION,
-      },
-    ],
+    title: "Dashboard",
+    href: "/workspace/[slug]",
+    icon: Layers3,
+    match: "exact",
+    permission: TENANT_METRICS_READ_PERMISSION,
   },
   {
-    title: "Operações",
-    items: [
-      {
-        title: "Inbox",
-        href: "/workspace/[slug]/inbox",
-        icon: Inbox,
-        match: "prefix",
-        permission: TENANT_CONVERSATIONS_READ_PERMISSION,
-        hasChildren: true,
-      },
-      {
-        title: "Contatos",
-        href: "/workspace/[slug]/inbox/contacts",
-        icon: BookUser,
-        match: "prefix",
-        permission:
-          TENANT_CONTACTS_READ_PERMISSION || TENANT_CONTACTS_MANAGE_PERMISSION,
-        children: true,
-      },
-      {
-        title: "Agents",
-        href: "/workspace/[slug]/agents",
-        icon: Bot,
-        match: "prefix",
-        permission:
-          TENANT_AGENTS_READ_PERMISSION || TENANT_AGENTS_MANAGE_PERMISSION,
-        children: true,
-      },
-      {
-        title: "Times",
-        href: "/workspace/[slug]/teams",
-        icon: UsersRound,
-        match: "prefix",
-      },
-      {
-        title: "Surveys",
-        href: "/workspace/[slug]/surveys",
-        icon: FileText,
-        match: "prefix",
-        permission:
-          TENANT_SURVEYS_READ_PERMISSION || TENANT_SURVEYS_MANAGE_PERMISSION,
-      },
-      {
-        title: "LPs",
-        href: "/workspace/[slug]/lp",
-        icon: Layers3,
-        match: "prefix",
-        permission:
-          TENANT_LANDING_PAGES_READ_PERMISSION ||
-          TENANT_LANDING_PAGES_MANAGE_PERMISSION,
-      },
-      {
-        title: "Mensagens",
-        href: "/workspace/[slug]/inbox/messages",
-        icon: MessageCircleMore,
-        match: "prefix",
-        permission:
-          TENANT_MESSAGES_READ_PERMISSION ||
-          TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION ||
-          TENANT_WHATSAPP_SENDERS_READ_PERMISSION,
-        children: true,
-      },
-      {
-        title: "Iscas",
-        href: "/workspace/[slug]/hooks",
-        icon: Magnet,
-        match: "prefix",
-      },
-    ],
+    title: "Inbox",
+    href: "/workspace/[slug]/inbox",
+    icon: Inbox,
+    match: "prefix",
+    permission: TENANT_CONVERSATIONS_READ_PERMISSION,
+    hasChildren: true,
+  },
+  {
+    title: "Contatos",
+    href: "/workspace/[slug]/inbox/contacts",
+    icon: BookUser,
+    match: "prefix",
+    permission:
+      TENANT_CONTACTS_READ_PERMISSION || TENANT_CONTACTS_MANAGE_PERMISSION,
+    childOf: "/workspace/[slug]/inbox",
+  },
+  {
+    title: "Agents",
+    href: "/workspace/[slug]/inbox/agents",
+    icon: Bot,
+    match: "prefix",
+    permission:
+      TENANT_AGENTS_READ_PERMISSION || TENANT_AGENTS_MANAGE_PERMISSION,
+    childOf: "/workspace/[slug]/inbox",
+  },
+  {
+    title: "Mensagens",
+    href: "/workspace/[slug]/inbox/messages",
+    icon: MessageCircleMore,
+    match: "prefix",
+    permission:
+      TENANT_MESSAGES_READ_PERMISSION ||
+      TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION ||
+      TENANT_WHATSAPP_SENDERS_READ_PERMISSION,
+    childOf: "/workspace/[slug]/inbox",
+  },
+  {
+    title: "Times",
+    href: "/workspace/[slug]/teams",
+    icon: UsersRound,
+    match: "prefix",
+  },
+  {
+    title: "Surveys",
+    href: "/workspace/[slug]/surveys",
+    icon: FileText,
+    match: "prefix",
+    permission:
+      TENANT_SURVEYS_READ_PERMISSION || TENANT_SURVEYS_MANAGE_PERMISSION,
+  },
+  {
+    title: "LPs",
+    href: "/workspace/[slug]/lp",
+    icon: Layers3,
+    match: "prefix",
+    hasChildren: true,
+    permission:
+      TENANT_LANDING_PAGES_READ_PERMISSION ||
+      TENANT_LANDING_PAGES_MANAGE_PERMISSION,
+  },
+  {
+    title: "Criar",
+    href: "/workspace/[slug]/lp/create",
+    icon: FileText,
+    match: "prefix",
+    permission:
+      TENANT_LANDING_PAGES_READ_PERMISSION ||
+      TENANT_LANDING_PAGES_MANAGE_PERMISSION,
+    childOf: "/workspace/[slug]/lp",
+  },
+  {
+    title: "Iscas",
+    href: "/workspace/[slug]/hooks",
+    icon: Magnet,
+    match: "prefix",
   },
   {
     title: "Configurações",
-    items: [
-      {
-        title: "Observabilidade",
-        href: "/workspace/[slug]/settings/observability",
-        icon: Activity,
-        match: "prefix",
-        permission:
-          TENANT_METRICS_READ_PERMISSION || TENANT_AUDIT_LOGS_READ_PERMISSION,
-      },
-      {
-        title: "RBAC",
-        href: "/workspace/[slug]/settings/rbac",
-        icon: ShieldCheck,
-        match: "exact",
-        permission:
-          TENANT_MEMBERS_READ_PERMISSION ||
-          TENANT_PERMISSIONS_MANAGE_PERMISSION,
-      },
-    ],
+    href: "/workspace/[slug]/settings",
+    icon: Settings,
+    match: "prefix",
+    hasChildren: true,
+  },
+  {
+    title: "Minha conta",
+    href: "/workspace/[slug]/settings/account",
+    icon: KeyRound,
+    match: "prefix",
+    childOf: "/workspace/[slug]/settings",
+  },
+  {
+    title: "Observabilidade",
+    href: "/workspace/[slug]/settings/observability",
+    icon: Activity,
+    match: "prefix",
+    permission:
+      TENANT_METRICS_READ_PERMISSION || TENANT_AUDIT_LOGS_READ_PERMISSION,
+    childOf: "/workspace/[slug]/settings",
+  },
+  {
+    title: "RBAC",
+    href: "/workspace/[slug]/settings/rbac",
+    icon: ShieldCheck,
+    match: "exact",
+    permission:
+      TENANT_MEMBERS_READ_PERMISSION || TENANT_PERMISSIONS_MANAGE_PERMISSION,
+    childOf: "/workspace/[slug]/settings",
   },
 ];
 
@@ -205,10 +212,22 @@ const pageContentMap: Record<
     title: "Conta e preferências",
     description: "Gerencie a senha e os ajustes da sua conta autenticada.",
   },
+  "/workspace/[slug]/settings": {
+    eyebrow: "Configurações",
+    title: "Ajustes do workspace",
+    description:
+      "Centralize preferências da conta, observabilidade e governança de acesso em um único lugar.",
+  },
   "/workspace/[slug]/teams": {
     eyebrow: "Times",
     title: "Gestão de times",
     description: "Crie times, acompanhe membros e administre invites ativos.",
+  },
+  "/workspace/[slug]/inbox/agents": {
+    eyebrow: "Agents",
+    title: "Especialistas e agentes do inbox",
+    description:
+      "Gerencie os agentes que apoiam o atendimento, o pós-survey e o contexto das conversas.",
   },
   "/workspace/[slug]/inbox/contacts": {
     eyebrow: "Contatos",
@@ -445,44 +464,59 @@ function NavItemComponent({
   );
 }
 
-function NavGroupComponent({
-  group,
+function NavigationItems({
   slug,
   collapsed,
   pathname,
   hasPermission,
 }: {
-  group: NavGroup;
   slug: string;
   collapsed: boolean;
   pathname: string;
   hasPermission: (permission?: string) => boolean;
 }) {
-  const [isExpanded, setIsExpanded] = useState(() => {
-    return group.items.some((item) => isNavItemActive(pathname, item, slug));
-  });
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>(
+    {},
+  );
 
-  const visibleItems = group.items.filter(
+  const visibleItems = navigationItems.filter(
     (item) => !item.permission || hasPermission(item.permission),
   );
+  const rootItems = visibleItems.filter((item) => !item.childOf);
+  const childItemsByParent = visibleItems.reduce<Record<string, NavItem[]>>(
+    (accumulator, item) => {
+      if (item.childOf) {
+        accumulator[item.childOf] ??= [];
+        accumulator[item.childOf]?.push(item);
+      }
 
-  if (visibleItems.length === 0) return null;
-
-  const parentItem = visibleItems.find((item) => item.hasChildren);
-  const childItems = visibleItems.filter((item) => item.children);
-  const standaloneItems = visibleItems.filter(
-    (item) => item !== parentItem && !item.children,
+      return accumulator;
+    },
+    {},
   );
+
+  const isItemExpanded = (item: NavItem) => {
+    if (item.href in expandedItems) {
+      return expandedItems[item.href];
+    }
+
+    return (
+      isNavItemActive(pathname, item, slug) ||
+      (childItemsByParent[item.href] ?? []).some((child) =>
+        isNavItemActive(pathname, child, slug),
+      )
+    );
+  };
 
   if (collapsed) {
     return (
       <div className="flex flex-col items-center gap-1">
-        {visibleItems.map((item) => (
+        {rootItems.map((item) => (
           <NavItemComponent
             key={item.href}
             item={item}
             slug={slug}
-            collapsed={collapsed}
+            collapsed
             pathname={pathname}
             isLocked={false}
           />
@@ -491,107 +525,83 @@ function NavGroupComponent({
     );
   }
 
-  if (group.title && parentItem && childItems.length > 0) {
-    return (
-      <div className="space-y-2.5">
-        <div className="px-4 py-1 text-left text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground">
-          {group.title}
-        </div>
+  return (
+    <div className="flex flex-col gap-2">
+      {rootItems.map((item) => {
+        const childItems = childItemsByParent[item.href] ?? [];
 
-        <div className="space-y-2">
-          {isExpanded ? (
-            <div className="isolate flex flex-col items-center space-y-1.5">
-              <div className="relative z-10 w-full">
-                <NavItemComponent
-                  item={parentItem}
-                  slug={slug}
-                  collapsed={collapsed}
-                  pathname={pathname}
-                  isLocked={false}
-                  layout="hero"
-                  isExpanded={isExpanded}
-                  onToggleChildren={() => setIsExpanded(false)}
-                />
-              </div>
-              <div className="relative z-0 -mt-3 w-[calc(100%-1.25rem)] rounded-[1.5rem] bg-secondary/70 px-3 pb-3 pt-4">
-                <div className="flex flex-col gap-1.5">
-                  {childItems.map((item) => (
+        if (item.hasChildren && childItems.length > 0) {
+          const isExpanded = isItemExpanded(item);
+
+          return (
+            <div key={item.href}>
+              {isExpanded ? (
+                <div className="isolate flex flex-col items-center space-y-1.5">
+                  <div className="relative z-10 w-full">
                     <NavItemComponent
-                      key={item.href}
                       item={item}
                       slug={slug}
                       collapsed={collapsed}
                       pathname={pathname}
                       isLocked={false}
-                      layout="child"
+                      layout="hero"
+                      isExpanded={isExpanded}
+                      onToggleChildren={() =>
+                        setExpandedItems((current) => ({
+                          ...current,
+                          [item.href]: false,
+                        }))
+                      }
                     />
-                  ))}
+                  </div>
+                  <div className="relative z-0 -mt-3 w-[calc(100%-1.25rem)] rounded-[1.5rem] bg-secondary/70 px-3 pb-3 pt-4">
+                    <div className="flex flex-col gap-1.5">
+                      {childItems.map((childItem) => (
+                        <NavItemComponent
+                          key={childItem.href}
+                          item={childItem}
+                          slug={slug}
+                          collapsed={collapsed}
+                          pathname={pathname}
+                          isLocked={false}
+                          layout="child"
+                        />
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ) : (
-            <NavItemComponent
-              item={parentItem}
-              slug={slug}
-              collapsed={collapsed}
-              pathname={pathname}
-              isLocked={false}
-              layout="hero"
-              isExpanded={isExpanded}
-              onToggleChildren={() => setIsExpanded(true)}
-            />
-          )}
-
-          {standaloneItems.length > 0 ? (
-            <div className="flex flex-col gap-2">
-              {standaloneItems.map((item) => (
+              ) : (
                 <NavItemComponent
-                  key={item.href}
                   item={item}
                   slug={slug}
                   collapsed={collapsed}
                   pathname={pathname}
                   isLocked={false}
+                  layout="hero"
+                  isExpanded={false}
+                  onToggleChildren={() =>
+                    setExpandedItems((current) => ({
+                      ...current,
+                      [item.href]: true,
+                    }))
+                  }
                 />
-              ))}
+              )}
             </div>
-          ) : null}
-        </div>
-      </div>
-    );
-  }
+          );
+        }
 
-  return (
-    <div className="space-y-2">
-      {group.title && (
-        <button
-          type="button"
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="flex w-full items-center justify-between px-4 py-1 text-xs font-medium uppercase tracking-[0.22em] text-muted-foreground hover:text-foreground"
-        >
-          <span>{group.title}</span>
-          {isExpanded ? (
-            <ChevronUp className="size-3.5" />
-          ) : (
-            <ChevronDown className="size-3.5" />
-          )}
-        </button>
-      )}
-      {(!group.title || isExpanded) && (
-        <div className="flex flex-col gap-2">
-          {visibleItems.map((item) => (
-            <NavItemComponent
-              key={item.href}
-              item={item}
-              slug={slug}
-              collapsed={collapsed}
-              pathname={pathname}
-              isLocked={false}
-              layout="default"
-            />
-          ))}
-        </div>
-      )}
+        return (
+          <NavItemComponent
+            key={item.href}
+            item={item}
+            slug={slug}
+            collapsed={collapsed}
+            pathname={pathname}
+            isLocked={false}
+          />
+        );
+      })}
     </div>
   );
 }
@@ -645,20 +655,16 @@ function SidebarContent({
 
       <nav
         className={cn(
-          "flex flex-col gap-6",
+          "flex flex-col gap-2",
           collapsed ? "items-center" : undefined,
         )}
       >
-        {navigationGroups.map((group, index) => (
-          <NavGroupComponent
-            key={group.title ?? `group-${index}`}
-            group={group}
-            slug={tenantSlug}
-            collapsed={collapsed}
-            pathname={pathname}
-            hasPermission={hasPermission}
-          />
-        ))}
+        <NavigationItems
+          slug={tenantSlug}
+          collapsed={collapsed}
+          pathname={pathname}
+          hasPermission={hasPermission}
+        />
       </nav>
 
       {collapsed ? (

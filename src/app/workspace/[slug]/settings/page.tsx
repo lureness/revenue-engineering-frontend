@@ -1,7 +1,13 @@
-export default function SettingsPage() {
-  return (
-    <div>
-      <h1>Settings</h1>
-    </div>
-  );
+import { SettingsOverview } from "@/components/workspace/settings/settings-overview";
+
+type SettingsPageProps = {
+  params: Promise<{
+    slug: string;
+  }>;
+};
+
+export default async function SettingsPage({ params }: SettingsPageProps) {
+  const { slug } = await params;
+
+  return <SettingsOverview tenantSlug={slug} />;
 }
