@@ -11,7 +11,7 @@ type LurenessMarkProps = {
 export function LurenessMark({
   className,
   compact = false,
-  subtitle = "WhatsApp Operations Suite",
+  subtitle = "Revenue Intelligence",
 }: LurenessMarkProps) {
   if (compact) {
     return (
