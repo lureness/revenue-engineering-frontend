@@ -1,15 +1,34 @@
 import { apiRequest } from "@/lib/api/client";
 import type {
+  CreateProviderAccountPayload,
   CreateWhatsAppSenderPayload,
   MessageFilters,
   MessageItem,
+  MessagingProviderItem,
   ProviderAccountItem,
   WhatsAppSenderItem,
 } from "@/lib/messaging/types";
 
+export async function getMessagingProviders() {
+  return apiRequest<MessagingProviderItem[]>("/provider-accounts/providers", {
+    method: "GET",
+    cache: "no-store",
+  });
+}
+
 export async function getProviderAccounts() {
   return apiRequest<ProviderAccountItem[]>("/provider-accounts", {
     method: "GET",
+    cache: "no-store",
+  });
+}
+
+export async function createProviderAccount(
+  payload: CreateProviderAccountPayload,
+) {
+  return apiRequest<ProviderAccountItem>("/provider-accounts", {
+    method: "POST",
+    body: payload,
     cache: "no-store",
   });
 }

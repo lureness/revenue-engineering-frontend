@@ -100,6 +100,7 @@ export type InboxConversationDetail = {
   contact_email: string | null;
   contact_phone_number: string | null;
   survey: InboxConversationSurveyContext | null;
+  latest_agent_run: AgentRunSummaryItem | null;
   messages: InboxMessageItem[];
 };
 
@@ -117,6 +118,32 @@ export type InboxConversationSurveyContext = {
   sales_team_size_range: string | null;
   completed_at: string | null;
   unlocked_at: string | null;
+};
+
+export type AgentRunSummaryItem = {
+  id: string;
+  agent_code: string;
+  analysis_type: string;
+  status: string;
+  summary: string | null;
+  priority: string | null;
+  next_action: string | null;
+  suggested_reply: string | null;
+  error_message: string | null;
+  created_at: string;
+  completed_at: string | null;
+};
+
+export type AgentRunItem = AgentRunSummaryItem & {
+  tenant_id: string;
+  conversation_agent_id: string | null;
+  conversation_id: string | null;
+  survey_submission_id: string | null;
+  subject_type: string;
+  subject_id: string;
+  input_snapshot: Record<string, unknown> | null;
+  output_payload: Record<string, unknown> | null;
+  updated_at: string;
 };
 
 export type InboxConversationFilters = {

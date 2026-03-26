@@ -81,7 +81,7 @@ type NavItem = {
 
 const navigationItems: NavItem[] = [
   {
-    title: "Dashboard",
+    title: "Workspace",
     href: "/workspace/[slug]",
     icon: Layers3,
     match: "exact",
@@ -203,8 +203,8 @@ const pageContentMap: Record<
   { eyebrow: string; title: string; description: string }
 > = {
   "/workspace/[slug]": {
-    eyebrow: "Dashboard",
-    title: "Dashboard do workspace",
+    eyebrow: "Workspace",
+    title: "Workspace overview",
     description: "Visão geral das métricas e indicadores do seu workspace.",
   },
   "/workspace/[slug]/settings/account": {
@@ -287,6 +287,7 @@ const pageContentMap: Record<
 
 type AppShellProps = {
   children: ReactNode;
+  workspaceBanner?: ReactNode;
   tenantSlug?: string;
   tenantName?: string;
   userEmail?: string;
@@ -636,7 +637,7 @@ function SidebarContent({
             collapsed ? "justify-center" : undefined,
           )}
         >
-          <LurenessMark compact={collapsed} subtitle="Application Workspace" />
+          <LurenessMark compact={collapsed} subtitle="Revenue Intelligence" />
           {!collapsed && onCollapse ? (
             <div className="flex justify-center">
               <Button
@@ -820,6 +821,7 @@ function SidebarContent({
 
 export function AppShell({
   children,
+  workspaceBanner,
   tenantSlug,
   tenantName,
   userEmail,
@@ -862,7 +864,7 @@ export function AppShell({
       <div className={cn("relative min-h-screen")}>
         <aside
           className={cn(
-            "surface-panel-strong hidden border-b border-border/70 p-5 lg:fixed lg:top-4 lg:bottom-4 lg:left-4 lg:z-20 lg:flex lg:flex-col lg:overflow-y-auto lg:rounded-[2rem] lg:border lg:shadow-lg",
+            "surface-panel-strong scrollbar-hidden hidden border-b border-border/70 p-5 lg:fixed lg:top-4 lg:bottom-4 lg:left-4 lg:z-20 lg:flex lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:rounded-[2rem] lg:border lg:shadow-lg",
             isSidebarCollapsed ? "lg:w-24 lg:px-4 lg:py-6" : "lg:w-72 lg:p-6",
           )}
         >
@@ -968,6 +970,8 @@ export function AppShell({
               </div>
             </div>
           </header>
+
+          {workspaceBanner}
 
           <main className="relative z-10 flex-1 px-6 py-8 lg:px-4 lg:py-8">
             {children}

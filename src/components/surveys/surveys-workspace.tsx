@@ -70,6 +70,7 @@ type CreateTypebotFormState = {
   name: string;
   slug: string;
   description: string;
+  survey_kind: string;
   typebot_public_id: string;
   typebot_typebot_id: string;
   typebot_edit_url: string;
@@ -79,6 +80,7 @@ const INITIAL_TYPEBOT_FORM: CreateTypebotFormState = {
   name: "",
   slug: "",
   description: "",
+  survey_kind: "custom",
   typebot_public_id: "",
   typebot_typebot_id: "",
   typebot_edit_url: "",
@@ -111,6 +113,17 @@ function getConfigurationText(
 
 function getEngineLabel(engine: string) {
   return engine === "typebot" ? "Typebot" : "Nativo";
+}
+
+function getSurveyKindLabel(surveyKind: string) {
+  switch (surveyKind) {
+    case "ier":
+      return "IER";
+    case "diagnostico-padrao":
+      return "Diagnóstico padrão";
+    default:
+      return "Customizado";
+  }
 }
 
 export function SurveysWorkspace() {
@@ -262,6 +275,7 @@ export function SurveysWorkspace() {
         slug: normalizeSlug(typebotForm.slug || typebotForm.name),
         name: typebotForm.name.trim(),
         description: trimToNull(typebotForm.description),
+        survey_kind: typebotForm.survey_kind,
         typebot_public_id: trimToNull(typebotForm.typebot_public_id),
         typebot_typebot_id: trimToNull(typebotForm.typebot_typebot_id),
         typebot_edit_url: trimToNull(typebotForm.typebot_edit_url),
@@ -322,6 +336,17 @@ export function SurveysWorkspace() {
   );
   const typebotTemplates = useMemo(
     () => templates.filter((template) => template.engine === "typebot").length,
+    [templates],
+  );
+  const diagnosticoPadraoTemplate = useMemo(
+    () =>
+      templates.filter(
+        (template) => template.survey_kind === "diagnostico-padrao",
+      ).length,
+    [templates],
+  );
+  const ierTemplates = useMemo(
+    () => templates.filter((template) => template.survey_kind === "ier").length,
     [templates],
   );
 
@@ -426,6 +451,28 @@ export function SurveysWorkspace() {
                             className="h-11 rounded-2xl"
                             placeholder="Diagnostico comercial"
                           />
+                        </FieldContent>
+                      </Field>
+
+                      <Field>
+                        <FieldLabel>Tipo funcional</FieldLabel>
+                        <FieldContent>
+                          <select
+                            value={typebotForm.survey_kind}
+                            onChange={(event) =>
+                              setTypebotForm((currentValue) => ({
+                                ...currentValue,
+                                survey_kind: event.target.value,
+                              }))
+                            }
+                            className="h-11 w-full rounded-2xl border border-border/70 bg-background px-4 text-sm text-foreground outline-none transition focus:border-foreground/30"
+                          >
+                            <option value="custom">Customizado</option>
+                            <option value="diagnostico-padrao">
+                              Diagnóstico padrão
+                            </option>
+                            <option value="ier">IER</option>
+                          </select>
                         </FieldContent>
                       </Field>
 
@@ -631,6 +678,26 @@ export function SurveysWorkspace() {
                 </p>
               </CardContent>
             </Card>
+            <Card size="sm" className="rounded-[1.4rem] bg-background/85">
+              <CardContent className="grid gap-2 pt-4">
+                <Badge variant="secondary" className="w-fit">
+                  Diagnóstico padrão
+                </Badge>
+                <p className="font-serif text-4xl tracking-tight text-foreground">
+                  {diagnosticoPadraoTemplate}
+                </p>
+              </CardContent>
+            </Card>
+            <Card size="sm" className="rounded-[1.4rem] bg-background/85">
+              <CardContent className="grid gap-2 pt-4">
+                <Badge variant="secondary" className="w-fit">
+                  IER
+                </Badge>
+                <p className="font-serif text-4xl tracking-tight text-foreground">
+                  {ierTemplates}
+                </p>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="grid gap-3 md:grid-cols-2">
@@ -721,6 +788,9 @@ export function SurveysWorkspace() {
                             <Badge variant="secondary">
                               {getEngineLabel(template.engine)}
                             </Badge>
+                            <Badge variant="outline">
+                              {getSurveyKindLabel(template.survey_kind)}
+                            </Badge>
                             <Badge
                               variant={
                                 template.is_published ? "secondary" : "outline"
@@ -773,6 +843,15 @@ export function SurveysWorkspace() {
                               <div className="eyebrow mb-2">Typebot ID</div>
                               <div className="font-mono text-xs text-foreground">
                                 {template.typebot_typebot_id || "Nao informado"}
+                              </div>
+                            </div>
+                            <div className="rounded-[1.2rem] border border-border/70 bg-card/85 px-4 py-3 md:col-span-2">
+                              <div className="eyebrow mb-2">
+                                Webhook Typebot
+                              </div>
+                              <div className="break-all font-mono text-xs text-foreground">
+                                {template.typebot_webhook_url ||
+                                  "Nao configurado"}
                               </div>
                             </div>
                           </div>
@@ -858,6 +937,12 @@ export function SurveysWorkspace() {
                 </div>
               </div>
               <div className="rounded-[1.3rem] border border-border/70 bg-background/85 px-4 py-3">
+                <div className="eyebrow mb-2">Tipo funcional</div>
+                <div className="text-foreground">
+                  {getSurveyKindLabel(selectedTemplate.survey_kind)}
+                </div>
+              </div>
+              <div className="rounded-[1.3rem] border border-border/70 bg-background/85 px-4 py-3">
                 <div className="eyebrow mb-2">Slug</div>
                 <div className="font-mono text-xs text-foreground">
                   {tenant
@@ -875,6 +960,20 @@ export function SurveysWorkspace() {
                 <div className="eyebrow mb-2">Edit URL</div>
                 <div className="break-all text-xs text-muted-foreground">
                   {selectedTemplate.typebot_edit_url || "Nao informado"}
+                </div>
+              </div>
+              <div className="rounded-[1.3rem] border border-border/70 bg-background/85 px-4 py-3">
+                <div className="eyebrow mb-2">Webhook Typebot</div>
+                <div className="break-all text-xs text-muted-foreground">
+                  {selectedTemplate.typebot_webhook_url || "Nao configurado"}
+                </div>
+              </div>
+              <div className="rounded-[1.3rem] border border-border/70 bg-background/85 px-4 py-3">
+                <div className="eyebrow mb-2">Ultima ingestao</div>
+                <div className="text-foreground">
+                  {selectedTemplate.typebot_last_ingested_at
+                    ? formatDateTime(selectedTemplate.typebot_last_ingested_at)
+                    : "Ainda sem resultados recebidos"}
                 </div>
               </div>
             </CardContent>

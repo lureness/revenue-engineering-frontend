@@ -1,40 +1,32 @@
 import { describe, expect, it } from "vitest";
 
-import { shouldRedirectToProviderSetup } from "@/lib/messaging/onboarding";
+import { resolveProviderSetupStep } from "@/lib/messaging/onboarding";
 
-describe("shouldRedirectToProviderSetup", () => {
-  it("redireciona rotas internas do app que dependem do setup inicial", () => {
-    expect(shouldRedirectToProviderSetup("/workspace/basixdigital")).toBe(true);
-    expect(shouldRedirectToProviderSetup("/workspace/basixdigital/teams")).toBe(
-      true,
-    );
+describe("resolveProviderSetupStep", () => {
+  it("prioriza a criacao da conta de provedor quando ela ainda nao existe", () => {
     expect(
-      shouldRedirectToProviderSetup("/workspace/basixdigital/settings/rbac"),
-    ).toBe(true);
+      resolveProviderSetupStep({
+        hasProviderAccount: false,
+        hasSender: false,
+      }),
+    ).toBe("provider_account");
   });
 
-  it("não redireciona a área de mensageria, agents e conta do usuário", () => {
+  it("avanca para sender quando a conta de provedor ja existe", () => {
     expect(
-      shouldRedirectToProviderSetup("/workspace/basixdigital/inbox/messages"),
-    ).toBe(false);
-    expect(
-      shouldRedirectToProviderSetup(
-        "/workspace/basixdigital/inbox/messages/provider",
-      ),
-    ).toBe(false);
-    expect(
-      shouldRedirectToProviderSetup("/workspace/basixdigital/inbox/contacts"),
-    ).toBe(false);
-    expect(
-      shouldRedirectToProviderSetup("/workspace/basixdigital/inbox/agents"),
-    ).toBe(false);
-    expect(
-      shouldRedirectToProviderSetup("/workspace/basixdigital/settings/account"),
-    ).toBe(false);
+      resolveProviderSetupStep({
+        hasProviderAccount: true,
+        hasSender: false,
+      }),
+    ).toBe("sender");
   });
 
-  it("ignora rotas públicas", () => {
-    expect(shouldRedirectToProviderSetup("/login")).toBe(false);
-    expect(shouldRedirectToProviderSetup("/signup")).toBe(false);
+  it("marca o setup como pronto quando conta e sender ja existem", () => {
+    expect(
+      resolveProviderSetupStep({
+        hasProviderAccount: true,
+        hasSender: true,
+      }),
+    ).toBe("ready");
   });
 });

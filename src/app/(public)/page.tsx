@@ -1,10 +1,10 @@
 import {
   ArrowRight,
-  BarChart3,
   BadgeCheck,
+  BarChart3,
   BrainCircuit,
-  Building2,
   CircleDollarSign,
+  CogIcon,
   Gauge,
   LineChart,
   ShieldCheck,
@@ -13,9 +13,11 @@ import {
   UsersRound,
   Workflow,
 } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 import { LurenessMark } from "@/components/brand/lureness-mark";
+import { PublicLandingSessionLink } from "@/components/marketing/public-landing-session-link";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,13 +27,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import Image from "next/image";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const primaryActionClassName =
   "inline-flex items-center justify-center gap-2 rounded-full bg-foreground px-5 py-3 text-sm font-medium text-background transition-transform duration-200 hover:-translate-y-0.5";
 
 const secondaryActionClassName =
-  "inline-flex items-center justify-center gap-2 rounded-full border border-foreground/15 bg-card/80 px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted";
+  "inline-flex items-center justify-center gap-2 rounded-full border border-foreground/15 bg-muted/80 px-5 py-3 text-sm font-medium text-foreground transition-colors hover:bg-muted";
+
+const headerPrimaryActionClassName =
+  "inline-flex min-h-11 items-center justify-center gap-2 rounded-full bg-foreground px-6 py-3.5 text-sm font-semibold text-background shadow-lg shadow-foreground/10 transition-transform duration-200 hover:-translate-y-0.5";
+
+const headerSecondaryActionClassName =
+  "inline-flex min-h-11 items-center justify-center rounded-full border border-border/70 bg-transparent px-5 py-3 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-muted/30";
 
 const painPoints = [
   {
@@ -190,30 +202,45 @@ export default function LandingPage() {
         <header className="flex flex-col gap-5 pb-10 md:flex-row md:items-center md:justify-between">
           <LurenessMark />
 
-          <div className="flex flex-wrap items-center gap-3">
-            <ThemeToggle />
+          <nav className="flex flex-wrap items-center gap-2 rounded-full border border-border/70 bg-card/70 px-3 py-2 shadow-sm backdrop-blur-sm">
             <a
               href="#solucao"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               Solução
             </a>
             <a
               href="#como-fazemos"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               Como fazemos
             </a>
             <a
               href="#diferenciais"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="inline-flex rounded-full px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               Diferenciais
             </a>
-            <Link href="/diagnostico" className={primaryActionClassName}>
+          </nav>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href="/diagnostico" className={headerPrimaryActionClassName}>
               Fazer diagnóstico
               <ArrowRight className="size-4" />
             </Link>
+            <DropdownMenu>
+              <DropdownMenuTrigger className={headerSecondaryActionClassName}>
+                <CogIcon className="size-4" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="bg-transparent backdrop-blur shadow-lg w-48 p-4">
+                <div className="flex flex-col justify-center items-end w-full gap-2">
+                  <PublicLandingSessionLink
+                    className={headerSecondaryActionClassName}
+                  />
+                  <ThemeToggle />
+                </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
@@ -577,9 +604,11 @@ export default function LandingPage() {
                   Fazer diagnóstico
                   <ArrowRight className="size-4" />
                 </Link>
-                <Link href="/login" className={secondaryActionClassName}>
-                  Entrar
-                </Link>
+                <PublicLandingSessionLink
+                  authenticatedLabel="Ir para workspace"
+                  unauthenticatedLabel="Cadastrar"
+                  className={secondaryActionClassName}
+                />
               </div>
             </CardContent>
           </Card>

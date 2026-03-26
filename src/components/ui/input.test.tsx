@@ -1,8 +1,7 @@
-import { useState } from "react";
 import userEvent from "@testing-library/user-event";
-
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { useState } from "react";
 import { SignupForm } from "@/components/auth/signup-form";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { render, screen } from "@/test/test-utils";
 

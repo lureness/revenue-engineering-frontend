@@ -17,4 +17,8 @@ export const publicEnv = {
   typebotBuilderUrl: normalizeOptionalUrl(
     process.env.NEXT_PUBLIC_TYPEBOT_BUILDER_URL,
   ),
+  diagnosticoTenantSlug:
+    process.env.NEXT_PUBLIC_DIAGNOSTICO_TENANT_SLUG?.trim() || "",
+  diagnosticoSurveySlug:
+    process.env.NEXT_PUBLIC_DIAGNOSTICO_SURVEY_SLUG?.trim() || "",
 } as const;

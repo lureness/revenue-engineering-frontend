@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { isUnauthorizedApiError } from "@/lib/api/client";
 import { getLandingPages } from "@/lib/lp/api";
 import {
   getWorkspaceDashboardData,
@@ -99,6 +100,10 @@ export function WorkspaceDashboard({ tenantSlug }: WorkspaceDashboardProps) {
         setData(dashboardData);
         setLandingPagesCount(landingPages.length);
       } catch (err) {
+        if (isUnauthorizedApiError(err)) {
+          return;
+        }
+
         setError("Não foi possível carregar os dados do workspace.");
         console.error("Dashboard load error:", err);
       } finally {

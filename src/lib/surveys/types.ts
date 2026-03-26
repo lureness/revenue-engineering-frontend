@@ -9,9 +9,14 @@ export type SurveyTemplateItem = {
   name: string;
   engine: string;
   description: string;
+  survey_kind: string;
   typebot_public_id: string | null;
   typebot_typebot_id: string | null;
   typebot_edit_url: string | null;
+  typebot_webhook_url: string | null;
+  typebot_webhook_secret: string | null;
+  typebot_result_mapping: Record<string, unknown> | null;
+  typebot_last_ingested_at: string | null;
   configuration: SurveyTemplateConfiguration;
   is_published: boolean;
   created_at: string;
@@ -44,6 +49,7 @@ export type PublicSurveyTemplateItem = {
   name: string;
   engine: string;
   description: string;
+  survey_kind: string;
   typebot_public_id: string | null;
   typebot_public_url: string | null;
   configuration: SurveyTemplateConfiguration;
@@ -55,9 +61,12 @@ export type CreateTypebotSurveyTemplatePayload = {
   slug: string;
   name: string;
   description?: string | null;
+  survey_kind?: string;
   typebot_public_id?: string | null;
   typebot_typebot_id?: string | null;
   typebot_edit_url?: string | null;
+  typebot_webhook_secret?: string | null;
+  typebot_result_mapping?: Record<string, unknown> | null;
   configuration?: SurveyTemplateConfiguration;
   is_published?: boolean;
 };

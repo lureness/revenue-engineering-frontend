@@ -51,6 +51,15 @@ type AgentItem = {
   system_prompt: string;
   opening_message_template: string;
   is_active: boolean;
+  latest_run?: {
+    id: string;
+    analysis_type: string;
+    status: string;
+    summary: string | null;
+    next_action: string | null;
+    suggested_reply: string | null;
+    created_at: string;
+  } | null;
   created_at: string;
   updated_at: string;
 };
@@ -168,8 +177,8 @@ function CreateAgentDialog({ onCreated }: { onCreated?: () => void }) {
           <DialogHeader>
             <DialogTitle>Novo agent</DialogTitle>
             <DialogDescription>
-              Cadastre o especialista que vai atuar no inbox e nos fluxos
-              pós-survey do workspace.
+              Cadastre o especialista que vai gerar análise e drafts de resposta
+              para o inbox e os fluxos pós-survey do workspace.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -236,7 +245,7 @@ function CreateAgentDialog({ onCreated }: { onCreated?: () => void }) {
                 onChange={(event) =>
                   setOpeningMessageTemplate(event.target.value)
                 }
-                placeholder="Mensagem enviada quando o agent assumir a conversa."
+                placeholder="Mensagem-base usada como referência para drafts e follow-ups sugeridos."
                 rows={5}
                 required
               />
@@ -348,11 +357,25 @@ function AgentCard({
         </div>
         <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
           <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
-            Mensagem inicial
+            Base de resposta
           </p>
           <p className="line-clamp-3 text-sm text-foreground/80">
             {agent.opening_message_template}
           </p>
+        </div>
+        <div className="rounded-xl border border-border/60 bg-muted/20 p-3">
+          <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground">
+            Último run
+          </p>
+          <p className="text-sm text-foreground/80">
+            {agent.latest_run?.summary ||
+              "Sem análises executadas ainda para este especialista."}
+          </p>
+          {agent.latest_run?.next_action ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Próxima ação: {agent.latest_run.next_action}
+            </p>
+          ) : null}
         </div>
       </CardContent>
     </Card>
@@ -496,8 +519,8 @@ export function AgentsView() {
               </EmptyMedia>
               <EmptyTitle>Nenhum agent configurado</EmptyTitle>
               <EmptyDescription>
-                Crie o primeiro especialista do workspace para atuar nas
-                conversas do inbox.
+                Crie o primeiro especialista do workspace para gerar análise e
+                drafts de resposta nas conversas do inbox.
               </EmptyDescription>
             </EmptyHeader>
           </Empty>

@@ -6,7 +6,8 @@ import { type PropsWithChildren, startTransition, useState } from "react";
 import { AuthGuard } from "@/components/auth/auth-guard";
 import { useAuth } from "@/components/auth/auth-provider";
 import { AppShell } from "@/components/layout/app-shell";
-import { ProviderOnboardingGate } from "@/components/messaging/provider-onboarding-gate";
+import { ProviderSetupBanner } from "@/components/messaging/provider-setup-banner";
+import { ProviderSetupProvider } from "@/components/messaging/provider-setup-provider";
 
 type ProtectedWorkspaceShellProps = PropsWithChildren<{
   tenantSlug?: string;
@@ -35,17 +36,19 @@ export function ProtectedWorkspaceShell({
 
   return (
     <AuthGuard>
-      <ProviderOnboardingGate />
-      <AppShell
-        tenantSlug={tenantSlug}
-        tenantName={tenant?.name}
-        userEmail={user?.email}
-        userRole={user?.role}
-        onSignOut={handleSignOut}
-        signOutPending={isSigningOut}
-      >
-        {children}
-      </AppShell>
+      <ProviderSetupProvider>
+        <AppShell
+          tenantSlug={tenantSlug}
+          tenantName={tenant?.name}
+          userEmail={user?.email}
+          userRole={user?.role}
+          onSignOut={handleSignOut}
+          signOutPending={isSigningOut}
+          workspaceBanner={<ProviderSetupBanner />}
+        >
+          {children}
+        </AppShell>
+      </ProviderSetupProvider>
     </AuthGuard>
   );
 }

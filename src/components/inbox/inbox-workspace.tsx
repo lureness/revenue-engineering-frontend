@@ -74,6 +74,7 @@ import {
   markInboxConversationAsRead,
   pauseInboxConversationAgent,
   reopenInboxConversation,
+  rerunInboxConversationAnalysis,
   resumeInboxConversationAgent,
   sendInboxConversationMessage,
   takeoverInboxConversationAgent,
@@ -366,6 +367,8 @@ export function InboxWorkspace() {
   const [agentActionPending, setAgentActionPending] = useState<
     "pause" | "resume" | "takeover" | null
   >(null);
+  const [isReanalyzingConversation, setIsReanalyzingConversation] =
+    useState(false);
 
   const canReadConversations = hasTenantPermission(
     TENANT_CONVERSATIONS_READ_PERMISSION,
@@ -991,6 +994,45 @@ export function InboxWorkspace() {
     } finally {
       setAgentActionPending(null);
     }
+  }
+
+  async function handleRerunConversationAnalysis() {
+    if (!selectedConversationId) {
+      return;
+    }
+
+    setIsReanalyzingConversation(true);
+
+    try {
+      await rerunInboxConversationAnalysis(selectedConversationId);
+      await refreshSelectedConversation();
+      toast.success("Análise atualizada com sucesso.");
+    } catch (error) {
+      const presentation = formatApiErrorMessage(error, {
+        fallbackTitle: "Não foi possível reanalisar a conversa agora.",
+      });
+      toast.error(presentation.title, {
+        description: presentation.description,
+      });
+    } finally {
+      setIsReanalyzingConversation(false);
+    }
+  }
+
+  function handleInsertSuggestedReply() {
+    const suggestedReply =
+      selectedConversation?.latest_agent_run?.suggested_reply;
+    if (!suggestedReply) {
+      toast.error("Ainda não existe uma sugestão pronta para inserir.");
+      return;
+    }
+
+    setMessageBody((currentValue) =>
+      currentValue.trim()
+        ? `${currentValue.trim()}\n\n${suggestedReply}`
+        : suggestedReply,
+    );
+    toast.success("Sugestão inserida no composer.");
   }
 
   async function handleAssignConversation(
@@ -1880,6 +1922,103 @@ export function InboxWorkspace() {
                     )}
                   </div>
                 </div>
+
+                {canSeeAgentContext ? (
+                  <div className="rounded-[1.35rem] border border-border/70 bg-background/80 px-4 py-4">
+                    <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div className="space-y-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                            Última análise de IA
+                          </p>
+                          {selectedConversation.latest_agent_run ? (
+                            <Badge
+                              variant={
+                                selectedConversation.latest_agent_run.status ===
+                                "failed"
+                                  ? "outline"
+                                  : "secondary"
+                              }
+                            >
+                              <Sparkles className="size-3" />
+                              {selectedConversation.latest_agent_run.status ===
+                              "failed"
+                                ? "Falhou"
+                                : "Disponível"}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <p className="text-sm text-muted-foreground">
+                          {selectedConversation.latest_agent_run?.summary ||
+                            "Ainda não existe uma análise registrada para esta conversa."}
+                        </p>
+                        {selectedConversation.latest_agent_run?.priority ? (
+                          <p className="text-xs text-muted-foreground">
+                            Prioridade recomendada:{" "}
+                            <span className="font-medium text-foreground">
+                              {selectedConversation.latest_agent_run.priority}
+                            </span>
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void handleRerunConversationAnalysis()}
+                          disabled={isReanalyzingConversation}
+                        >
+                          {isReanalyzingConversation ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <RefreshCcw className="size-4" />
+                          )}
+                          Reanalisar
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={handleInsertSuggestedReply}
+                          disabled={
+                            !selectedConversation.latest_agent_run
+                              ?.suggested_reply
+                          }
+                        >
+                          <MessageCircleReply className="size-4" />
+                          Inserir sugestão
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                      <div className="rounded-[1.2rem] border border-border/70 bg-card/70 px-4 py-3">
+                        <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                          Próxima ação
+                        </p>
+                        <p className="mt-2 text-sm text-foreground">
+                          {selectedConversation.latest_agent_run?.next_action ||
+                            "A análise vai sugerir a próxima ação recomendada assim que for executada."}
+                        </p>
+                      </div>
+                      <div className="rounded-[1.2rem] border border-border/70 bg-card/70 px-4 py-3">
+                        <p className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                          Draft sugerido
+                        </p>
+                        <p className="mt-2 whitespace-pre-wrap text-sm text-foreground/85">
+                          {selectedConversation.latest_agent_run
+                            ?.suggested_reply ||
+                            "Quando a IA analisar a conversa, a sugestão de resposta aparece aqui."}
+                        </p>
+                      </div>
+                    </div>
+
+                    {selectedConversation.latest_agent_run?.error_message ? (
+                      <p className="mt-3 text-xs text-destructive">
+                        {selectedConversation.latest_agent_run.error_message}
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="rounded-[1.25rem] border border-border/70 bg-background/80 px-4 py-3">

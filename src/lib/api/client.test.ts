@@ -1,5 +1,12 @@
-import { apiRequest } from "@/lib/api/client";
-import { AUTH_UNAUTHORIZED_EVENT } from "@/lib/auth/events";
+import {
+  ApiClientError,
+  apiRequest,
+  isUnauthorizedApiError,
+} from "@/lib/api/client";
+import {
+  AUTH_UNAUTHORIZED_EVENT,
+  type AuthUnauthorizedEventDetail,
+} from "@/lib/auth/events";
 
 describe("apiRequest", () => {
   afterEach(() => {
@@ -65,7 +72,12 @@ describe("apiRequest", () => {
   });
 
   it("dispara o evento global de unauthorized em respostas 401", async () => {
-    const listener = vi.fn();
+    let eventDetail: AuthUnauthorizedEventDetail | undefined;
+    const listener = vi.fn((event: Event) => {
+      eventDetail = (
+        event as CustomEvent<AuthUnauthorizedEventDetail | undefined>
+      ).detail;
+    });
     window.addEventListener(AUTH_UNAUTHORIZED_EVENT, listener);
 
     vi.stubGlobal(
@@ -75,6 +87,7 @@ describe("apiRequest", () => {
           status: 401,
           headers: {
             "content-type": "application/json",
+            "X-Request-ID": "req_401",
           },
         }),
       ),
@@ -82,7 +95,37 @@ describe("apiRequest", () => {
 
     await expect(apiRequest("/auth/me")).rejects.toThrow();
     expect(listener).toHaveBeenCalledTimes(1);
+    expect(eventDetail).toEqual({
+      status: 401,
+      message: "invalid access token",
+      requestId: "req_401",
+      path: "/auth/me",
+    });
 
     window.removeEventListener(AUTH_UNAUTHORIZED_EVENT, listener);
+  });
+
+  it("identifica ApiClientError 401 com o helper reutilizavel", () => {
+    expect(
+      isUnauthorizedApiError(
+        new ApiClientError({
+          status: 401,
+          message: "missing bearer token",
+          requestId: null,
+          detail: { detail: "missing bearer token" },
+        }),
+      ),
+    ).toBe(true);
+
+    expect(
+      isUnauthorizedApiError(
+        new ApiClientError({
+          status: 403,
+          message: "missing permission: tenant.metrics.read",
+          requestId: null,
+          detail: { detail: "missing permission: tenant.metrics.read" },
+        }),
+      ),
+    ).toBe(false);
   });
 });
