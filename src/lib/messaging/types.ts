@@ -74,7 +74,10 @@ export type MessageItem = {
 export type CreateWhatsAppSenderPayload = {
   provider_account_id: string;
   phone_number: string;
+  sender_sid?: string;
   sender_id?: string;
+  messaging_service_sid?: string;
+  waba_id?: string;
   display_name?: string;
   is_default?: boolean;
 };

@@ -584,8 +584,12 @@ export function MessagingWorkspace() {
   const [providerAccountSecretRef, setProviderAccountSecretRef] = useState("");
   const [senderProviderAccountId, setSenderProviderAccountId] = useState("");
   const [senderPhoneNumber, setSenderPhoneNumber] = useState("");
+  const [senderSid, setSenderSid] = useState("");
   const [senderDisplayName, setSenderDisplayName] = useState("");
   const [senderIdentifier, setSenderIdentifier] = useState("");
+  const [senderMessagingServiceSid, setSenderMessagingServiceSid] =
+    useState("");
+  const [senderWabaId, setSenderWabaId] = useState("");
   const [senderIsDefault, setSenderIsDefault] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState("");
   const [selectedDirection, setSelectedDirection] = useState("");
@@ -631,6 +635,27 @@ export function MessagingWorkspace() {
   function getProviderField(key: string): MessagingProviderFieldItem | null {
     return (
       selectedProvider?.provider_account_fields.find(
+        (field) => field.key === key,
+      ) ?? null
+    );
+  }
+
+  const selectedSenderProvider = useMemo(() => {
+    const providerCode =
+      providerAccountMap.get(senderProviderAccountId)?.provider ?? null;
+    if (!providerCode) {
+      return null;
+    }
+
+    return (
+      availableProviders.find((provider) => provider.code === providerCode) ??
+      null
+    );
+  }, [availableProviders, providerAccountMap, senderProviderAccountId]);
+
+  function getSenderField(key: string): MessagingProviderFieldItem | null {
+    return (
+      selectedSenderProvider?.whatsapp_sender_fields.find(
         (field) => field.key === key,
       ) ?? null
     );
@@ -839,8 +864,11 @@ export function MessagingWorkspace() {
       const sender = await createWhatsAppSender({
         provider_account_id: senderProviderAccountId,
         phone_number: senderPhoneNumber.trim(),
+        sender_sid: senderSid.trim() || undefined,
         display_name: senderDisplayName.trim() || undefined,
         sender_id: senderIdentifier.trim() || undefined,
+        messaging_service_sid: senderMessagingServiceSid.trim() || undefined,
+        waba_id: senderWabaId.trim() || undefined,
         is_default: senderIsDefault,
       });
 
@@ -851,8 +879,11 @@ export function MessagingWorkspace() {
       }
       await refreshProviderSetup();
       setSenderPhoneNumber("");
+      setSenderSid("");
       setSenderDisplayName("");
       setSenderIdentifier("");
+      setSenderMessagingServiceSid("");
+      setSenderWabaId("");
       setSenderIsDefault(false);
       toast.success("Sender do WhatsApp criado com sucesso.");
     } catch (error) {
@@ -1403,6 +1434,31 @@ export function MessagingWorkspace() {
                     </FieldContent>
                   </Field>
 
+                  {getSenderField("sender_sid") ? (
+                    <Field>
+                      <FieldLabel>
+                        {getSenderField("sender_sid")?.label ?? "Sender SID"}
+                      </FieldLabel>
+                      <FieldContent>
+                        <Input
+                          value={senderSid}
+                          onChange={(event) => {
+                            setSenderSid(event.target.value);
+                          }}
+                          placeholder={
+                            getSenderField("sender_sid")?.placeholder ??
+                            "Opcional"
+                          }
+                        />
+                        {getSenderField("sender_sid")?.description ? (
+                          <FieldDescription>
+                            {getSenderField("sender_sid")?.description}
+                          </FieldDescription>
+                        ) : null}
+                      </FieldContent>
+                    </Field>
+                  ) : null}
+
                   <Field>
                     <FieldLabel>Nome de exibição</FieldLabel>
                     <FieldContent>
@@ -1417,20 +1473,80 @@ export function MessagingWorkspace() {
                   </Field>
 
                   <Field>
-                    <FieldLabel>Sender ID</FieldLabel>
+                    <FieldLabel>
+                      {getSenderField("sender_id")?.label ?? "Sender ID"}
+                    </FieldLabel>
                     <FieldContent>
                       <Input
                         value={senderIdentifier}
                         onChange={(event) => {
                           setSenderIdentifier(event.target.value);
                         }}
-                        placeholder="whatsapp:+5511999999999"
+                        placeholder={
+                          getSenderField("sender_id")?.placeholder ??
+                          "whatsapp:+5511999999999"
+                        }
                       />
                       <FieldDescription>
-                        Opcional. Se vazio, o backend usa o número informado.
+                        {getSenderField("sender_id")?.description ??
+                          "Opcional. Se vazio, o backend usa o número informado."}
                       </FieldDescription>
                     </FieldContent>
                   </Field>
+
+                  {getSenderField("messaging_service_sid") ? (
+                    <Field>
+                      <FieldLabel>
+                        {getSenderField("messaging_service_sid")?.label ??
+                          "Messaging Service SID"}
+                      </FieldLabel>
+                      <FieldContent>
+                        <Input
+                          value={senderMessagingServiceSid}
+                          onChange={(event) => {
+                            setSenderMessagingServiceSid(event.target.value);
+                          }}
+                          placeholder={
+                            getSenderField("messaging_service_sid")
+                              ?.placeholder ?? "Opcional"
+                          }
+                        />
+                        {getSenderField("messaging_service_sid")
+                          ?.description ? (
+                          <FieldDescription>
+                            {
+                              getSenderField("messaging_service_sid")
+                                ?.description
+                            }
+                          </FieldDescription>
+                        ) : null}
+                      </FieldContent>
+                    </Field>
+                  ) : null}
+
+                  {getSenderField("waba_id") ? (
+                    <Field>
+                      <FieldLabel>
+                        {getSenderField("waba_id")?.label ?? "WABA ID"}
+                      </FieldLabel>
+                      <FieldContent>
+                        <Input
+                          value={senderWabaId}
+                          onChange={(event) => {
+                            setSenderWabaId(event.target.value);
+                          }}
+                          placeholder={
+                            getSenderField("waba_id")?.placeholder ?? "Opcional"
+                          }
+                        />
+                        {getSenderField("waba_id")?.description ? (
+                          <FieldDescription>
+                            {getSenderField("waba_id")?.description}
+                          </FieldDescription>
+                        ) : null}
+                      </FieldContent>
+                    </Field>
+                  ) : null}
 
                   <Button
                     type="submit"
