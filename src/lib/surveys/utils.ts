@@ -70,6 +70,25 @@ export function buildPublicSurveyResumePath(args: {
   return `${buildPublicSurveyPath(args.tenantSlug, args.surveySlug)}?${query.toString()}`;
 }
 
+export function buildTypebotViewerUrl(args: {
+  publicUrl: string;
+  searchParams?: URLSearchParams;
+}) {
+  const url = new URL(args.publicUrl);
+
+  for (const [key, value] of (
+    args.searchParams ?? new URLSearchParams()
+  ).entries()) {
+    if (!value.trim()) {
+      continue;
+    }
+
+    url.searchParams.set(key, value);
+  }
+
+  return url.toString();
+}
+
 export function getAnsweredQuestionIds(submission: PublicSurveySubmissionItem) {
   return new Set(submission.answers.map((answer) => answer.question_id));
 }

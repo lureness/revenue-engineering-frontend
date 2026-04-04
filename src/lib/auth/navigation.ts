@@ -1,4 +1,4 @@
-const DEFAULT_AUTH_REDIRECT = "/app";
+const DEFAULT_AUTH_REDIRECT = "/workspace/[slug]";
 
 export function resolveSafeRedirectPath(
   redirectTo?: string | null,

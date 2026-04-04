@@ -9,11 +9,11 @@ import {
   Send,
   Smartphone,
 } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useAccess } from "@/components/access/access-provider";
 import { useAuth } from "@/components/auth/auth-provider";
+import { useProviderSetup } from "@/components/messaging/provider-setup-provider";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,8 +49,10 @@ import {
 } from "@/components/ui/table";
 import { formatApiErrorMessage } from "@/lib/api/error-messages";
 import {
+  createProviderAccount,
   createWhatsAppSender,
   getMessages,
+  getMessagingProviders,
   getProviderAccounts,
   getWhatsAppSenders,
 } from "@/lib/messaging/api";
@@ -65,6 +67,8 @@ import {
 } from "@/lib/messaging/format";
 import type {
   MessageItem,
+  MessagingProviderFieldItem,
+  MessagingProviderItem,
   ProviderAccountItem,
   WhatsAppSenderItem,
 } from "@/lib/messaging/types";
@@ -540,9 +544,9 @@ function MessageDetailDialog({
 }
 
 export function MessagingWorkspace() {
-  const searchParams = useSearchParams();
   const { tenant } = useAuth();
   const { hasTenantPermission, status: accessStatus } = useAccess();
+  const { refresh: refreshProviderSetup } = useProviderSetup();
 
   const canReadProviderAccounts = hasTenantPermission(
     TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION,
@@ -558,6 +562,9 @@ export function MessagingWorkspace() {
   );
   const canReadMessages = hasTenantPermission(TENANT_MESSAGES_READ_PERMISSION);
 
+  const [availableProviders, setAvailableProviders] = useState<
+    MessagingProviderItem[]
+  >([]);
   const [providerAccounts, setProviderAccounts] = useState<
     ProviderAccountItem[]
   >([]);
@@ -570,11 +577,19 @@ export function MessagingWorkspace() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isCreatingProvider, setIsCreatingProvider] = useState(false);
   const [isCreatingSender, setIsCreatingSender] = useState(false);
+  const [selectedProviderCode, setSelectedProviderCode] = useState("meta");
   const [providerAccountName, setProviderAccountName] = useState("");
+  const [providerAccountSid, setProviderAccountSid] = useState("");
+  const [providerAccountApiKeySid, setProviderAccountApiKeySid] = useState("");
+  const [providerAccountSecretRef, setProviderAccountSecretRef] = useState("");
   const [senderProviderAccountId, setSenderProviderAccountId] = useState("");
   const [senderPhoneNumber, setSenderPhoneNumber] = useState("");
+  const [senderSid, setSenderSid] = useState("");
   const [senderDisplayName, setSenderDisplayName] = useState("");
   const [senderIdentifier, setSenderIdentifier] = useState("");
+  const [senderMessagingServiceSid, setSenderMessagingServiceSid] =
+    useState("");
+  const [senderWabaId, setSenderWabaId] = useState("");
   const [senderIsDefault, setSenderIsDefault] = useState(false);
   const [selectedChannel, setSelectedChannel] = useState("");
   const [selectedDirection, setSelectedDirection] = useState("");
@@ -600,8 +615,6 @@ export function MessagingWorkspace() {
     useState(false);
   const [isLoadingSenderDrilldown, setIsLoadingSenderDrilldown] =
     useState(false);
-  const isProviderSetupFlow = searchParams.get("setup") === "provider";
-
   const activeSendersCount = senders.filter(
     (sender) => sender.status === "active",
   ).length;
@@ -609,6 +622,44 @@ export function MessagingWorkspace() {
     () => new Map(providerAccounts.map((account) => [account.id, account])),
     [providerAccounts],
   );
+  const selectedProvider = useMemo(
+    () =>
+      availableProviders.find(
+        (provider) => provider.code === selectedProviderCode,
+      ) ??
+      availableProviders[0] ??
+      null,
+    [availableProviders, selectedProviderCode],
+  );
+
+  function getProviderField(key: string): MessagingProviderFieldItem | null {
+    return (
+      selectedProvider?.provider_account_fields.find(
+        (field) => field.key === key,
+      ) ?? null
+    );
+  }
+
+  const selectedSenderProvider = useMemo(() => {
+    const providerCode =
+      providerAccountMap.get(senderProviderAccountId)?.provider ?? null;
+    if (!providerCode) {
+      return null;
+    }
+
+    return (
+      availableProviders.find((provider) => provider.code === providerCode) ??
+      null
+    );
+  }, [availableProviders, providerAccountMap, senderProviderAccountId]);
+
+  function getSenderField(key: string): MessagingProviderFieldItem | null {
+    return (
+      selectedSenderProvider?.whatsapp_sender_fields.find(
+        (field) => field.key === key,
+      ) ?? null
+    );
+  }
 
   const loadMessages = useCallback(async () => {
     if (!canReadMessages) {
@@ -648,6 +699,7 @@ export function MessagingWorkspace() {
       !canReadMessages
     ) {
       setProviderAccounts([]);
+      setAvailableProviders([]);
       setSenders([]);
       setMessages([]);
       setProviderError(null);
@@ -662,11 +714,17 @@ export function MessagingWorkspace() {
     setSenderError(null);
 
     try {
-      const [nextProviderAccounts, nextSenders] = await Promise.all([
-        canReadProviderAccounts ? getProviderAccounts() : Promise.resolve([]),
-        canReadSenders ? getWhatsAppSenders() : Promise.resolve([]),
-      ]);
+      const [nextProviders, nextProviderAccounts, nextSenders] =
+        await Promise.all([
+          getMessagingProviders(),
+          canReadProviderAccounts ? getProviderAccounts() : Promise.resolve([]),
+          canReadSenders ? getWhatsAppSenders() : Promise.resolve([]),
+        ]);
 
+      setAvailableProviders(nextProviders);
+      setSelectedProviderCode(
+        (currentValue) => currentValue || nextProviders[0]?.code || "meta",
+      );
       setProviderAccounts(nextProviderAccounts);
       setSenders(nextSenders);
     } catch (error) {
@@ -676,6 +734,7 @@ export function MessagingWorkspace() {
       });
       setProviderError(presentation.title);
       setSenderError(presentation.title);
+      setAvailableProviders([]);
       setProviderAccounts([]);
       setSenders([]);
     } finally {
@@ -712,6 +771,23 @@ export function MessagingWorkspace() {
   }, [providerAccounts.length, tenant?.name]);
 
   useEffect(() => {
+    if (availableProviders.length === 0) {
+      return;
+    }
+
+    setSelectedProviderCode((currentValue) => {
+      if (
+        currentValue &&
+        availableProviders.some((provider) => provider.code === currentValue)
+      ) {
+        return currentValue;
+      }
+
+      return availableProviders[0]?.code ?? "meta";
+    });
+  }, [availableProviders]);
+
+  useEffect(() => {
     if (accessStatus === "loading") {
       return;
     }
@@ -722,18 +798,44 @@ export function MessagingWorkspace() {
   async function handleCreateProvider(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
+    if (!providerAccountSid.trim()) {
+      toast.error(
+        `Informe ${getProviderField("account_sid")?.label ?? "o Account SID do provider"}.`,
+      );
+      return;
+    }
+
     setIsCreatingProvider(true);
 
     try {
-      const accounts = await getProviderAccounts();
+      const nextProviderAccount = await createProviderAccount({
+        provider: selectedProviderCode,
+        account_sid: providerAccountSid.trim(),
+        api_key_sid: providerAccountApiKeySid.trim() || undefined,
+        secret_ref: providerAccountSecretRef.trim() || undefined,
+        configuration: providerAccountName.trim()
+          ? {
+              friendly_name: providerAccountName.trim(),
+            }
+          : undefined,
+      });
+
+      const accounts = canReadProviderAccounts
+        ? await getProviderAccounts()
+        : [nextProviderAccount, ...providerAccounts];
+
       setProviderAccounts(accounts);
       setSenderProviderAccountId(
         (currentValue) => (currentValue || accounts[0]?.id) ?? "",
       );
-      toast.success("Conta Meta criada com sucesso.");
+      setProviderAccountSid("");
+      setProviderAccountApiKeySid("");
+      setProviderAccountSecretRef("");
+      await refreshProviderSetup();
+      toast.success("Provider conectado com sucesso.");
     } catch (error) {
       const presentation = formatApiErrorMessage(error, {
-        fallbackTitle: "Não foi possível criar a conta Meta agora.",
+        fallbackTitle: "Não foi possível conectar o provider agora.",
       });
       toast.error(presentation.title, {
         description: presentation.description,
@@ -762,8 +864,11 @@ export function MessagingWorkspace() {
       const sender = await createWhatsAppSender({
         provider_account_id: senderProviderAccountId,
         phone_number: senderPhoneNumber.trim(),
+        sender_sid: senderSid.trim() || undefined,
         display_name: senderDisplayName.trim() || undefined,
         sender_id: senderIdentifier.trim() || undefined,
+        messaging_service_sid: senderMessagingServiceSid.trim() || undefined,
+        waba_id: senderWabaId.trim() || undefined,
         is_default: senderIsDefault,
       });
 
@@ -772,9 +877,13 @@ export function MessagingWorkspace() {
       } else {
         setSenders((currentSenders) => [sender, ...currentSenders]);
       }
+      await refreshProviderSetup();
       setSenderPhoneNumber("");
+      setSenderSid("");
       setSenderDisplayName("");
       setSenderIdentifier("");
+      setSenderMessagingServiceSid("");
+      setSenderWabaId("");
       setSenderIsDefault(false);
       toast.success("Sender do WhatsApp criado com sucesso.");
     } catch (error) {
@@ -884,31 +993,57 @@ export function MessagingWorkspace() {
 
   return (
     <div className="grid gap-6">
-      {isProviderSetupFlow &&
-      providerAccounts.length === 0 &&
-      canManageProviderAccounts ? (
+      {canManageProviderAccounts || canManageSenders ? (
         <Card className="bg-card/85 shadow-sm">
-          <CardContent className="grid gap-3 pt-5">
-            <Badge variant="secondary" className="w-fit">
-              Próximo passo do onboarding
-            </Badge>
-            <div className="space-y-2">
-              <p className="font-serif text-3xl tracking-tight text-foreground">
-                Conecte a conta Meta do workspace
+          <CardContent className="grid gap-4 pt-6 lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
+            <div className="space-y-1">
+              <p className="text-base font-medium text-foreground">
+                Próximo passo da mensageria
               </p>
-              <p className="text-sm leading-7 text-muted-foreground">
-                A criação de times pode ficar para depois. O próximo passo
-                recomendado é criar a conta Meta com o mesmo nome do workspace
-                para habilitar o motor de WhatsApp.
+              <p className="text-sm leading-6 text-muted-foreground">
+                {providerAccounts.length === 0
+                  ? "Conecte um provider de mensageria no workspace para habilitar a base da operação de WhatsApp."
+                  : senders.length === 0
+                    ? "O provider já está conectado. Agora cadastre o primeiro sender do WhatsApp."
+                    : "A integração principal já está pronta. Você pode revisar contas, senders e histórico normalmente."}
               </p>
             </div>
+            {providerAccounts.length === 0 && canManageProviderAccounts ? (
+              <Button
+                type="button"
+                onClick={() => {
+                  document
+                    .getElementById("provider-account-form")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              >
+                <RadioTower className="size-4" />
+                Conectar provider
+              </Button>
+            ) : null}
+            {providerAccounts.length > 0 &&
+            senders.length === 0 &&
+            canManageSenders ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  document
+                    .getElementById("sender-form")
+                    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                }}
+              >
+                <Smartphone className="size-4" />
+                Cadastrar sender
+              </Button>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <MetricCard
-          label="Contas Meta"
+          label="Contas do provedor"
           value={String(providerAccounts.length)}
           description="Conexões gerenciadas do workspace com o provedor."
           icon={RadioTower}
@@ -955,8 +1090,8 @@ export function MessagingWorkspace() {
                     </EmptyMedia>
                     <EmptyTitle>Nenhuma conta conectada</EmptyTitle>
                     <EmptyDescription>
-                      Crie a conta Meta do workspace para começar o onboarding
-                      dos senders.
+                      Conecte o primeiro provider de mensageria do workspace
+                      para começar o onboarding dos senders.
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>
@@ -1011,6 +1146,7 @@ export function MessagingWorkspace() {
 
               {canManageProviderAccounts ? (
                 <form
+                  id="provider-account-form"
                   className="grid gap-4 rounded-[1.5rem] border border-border/70 bg-background/70 p-4"
                   onSubmit={(event) => {
                     void handleCreateProvider(event);
@@ -1018,12 +1154,32 @@ export function MessagingWorkspace() {
                 >
                   <div className="space-y-1">
                     <p className="text-sm font-medium text-foreground">
-                      Criar conta Meta
+                      Conectar provider de mensageria
                     </p>
                     <p className="text-sm leading-6 text-muted-foreground">
-                      Cadastre a conexão com a API Meta Cloud para WhatsApp.
+                      Escolha o provider e cadastre os identificadores
+                      operacionais usados por este workspace.
                     </p>
                   </div>
+
+                  <Field>
+                    <FieldLabel>Provider</FieldLabel>
+                    <FieldContent>
+                      <select
+                        value={selectedProviderCode}
+                        onChange={(event) => {
+                          setSelectedProviderCode(event.target.value);
+                        }}
+                        className="h-8 rounded-lg border border-border bg-background px-3 text-sm text-foreground outline-none transition-colors focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50"
+                      >
+                        {availableProviders.map((provider) => (
+                          <option key={provider.code} value={provider.code}>
+                            {provider.label}
+                          </option>
+                        ))}
+                      </select>
+                    </FieldContent>
+                  </Field>
 
                   <Field>
                     <FieldLabel>Nome da conta</FieldLabel>
@@ -1035,6 +1191,77 @@ export function MessagingWorkspace() {
                         }}
                         placeholder="Ex.: BasixDigital Meta"
                       />
+                      <FieldDescription>
+                        Opcional. Usado como nome amigável interno no workspace.
+                      </FieldDescription>
+                    </FieldContent>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>
+                      {getProviderField("account_sid")?.label ?? "Account SID"}
+                    </FieldLabel>
+                    <FieldContent>
+                      <Input
+                        value={providerAccountSid}
+                        onChange={(event) => {
+                          setProviderAccountSid(event.target.value);
+                        }}
+                        placeholder={
+                          getProviderField("account_sid")?.placeholder ??
+                          "Ex.: acct_provider_workspace"
+                        }
+                      />
+                      {getProviderField("account_sid")?.description ? (
+                        <FieldDescription>
+                          {getProviderField("account_sid")?.description}
+                        </FieldDescription>
+                      ) : null}
+                    </FieldContent>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>
+                      {getProviderField("api_key_sid")?.label ?? "API Key SID"}
+                    </FieldLabel>
+                    <FieldContent>
+                      <Input
+                        value={providerAccountApiKeySid}
+                        onChange={(event) => {
+                          setProviderAccountApiKeySid(event.target.value);
+                        }}
+                        placeholder={
+                          getProviderField("api_key_sid")?.placeholder ??
+                          "Opcional"
+                        }
+                      />
+                      {getProviderField("api_key_sid")?.description ? (
+                        <FieldDescription>
+                          {getProviderField("api_key_sid")?.description}
+                        </FieldDescription>
+                      ) : null}
+                    </FieldContent>
+                  </Field>
+
+                  <Field>
+                    <FieldLabel>
+                      {getProviderField("secret_ref")?.label ?? "Secret Ref"}
+                    </FieldLabel>
+                    <FieldContent>
+                      <Input
+                        value={providerAccountSecretRef}
+                        onChange={(event) => {
+                          setProviderAccountSecretRef(event.target.value);
+                        }}
+                        placeholder={
+                          getProviderField("secret_ref")?.placeholder ??
+                          "Ex.: infisical/provider/workspace"
+                        }
+                      />
+                      <FieldDescription>
+                        {getProviderField("secret_ref")?.description ??
+                          "Opcional. Referência do segredo armazenado fora da aplicação."}
+                      </FieldDescription>
                     </FieldContent>
                   </Field>
 
@@ -1044,7 +1271,7 @@ export function MessagingWorkspace() {
                     ) : (
                       <RadioTower className="size-4" />
                     )}
-                    Criar conta
+                    Conectar provider
                   </Button>
                 </form>
               ) : null}
@@ -1158,6 +1385,7 @@ export function MessagingWorkspace() {
 
               {canManageSenders ? (
                 <form
+                  id="sender-form"
                   className="grid gap-4 rounded-[1.5rem] border border-border/70 bg-background/70 p-4"
                   onSubmit={(event) => {
                     void handleCreateSender(event);
@@ -1206,6 +1434,31 @@ export function MessagingWorkspace() {
                     </FieldContent>
                   </Field>
 
+                  {getSenderField("sender_sid") ? (
+                    <Field>
+                      <FieldLabel>
+                        {getSenderField("sender_sid")?.label ?? "Sender SID"}
+                      </FieldLabel>
+                      <FieldContent>
+                        <Input
+                          value={senderSid}
+                          onChange={(event) => {
+                            setSenderSid(event.target.value);
+                          }}
+                          placeholder={
+                            getSenderField("sender_sid")?.placeholder ??
+                            "Opcional"
+                          }
+                        />
+                        {getSenderField("sender_sid")?.description ? (
+                          <FieldDescription>
+                            {getSenderField("sender_sid")?.description}
+                          </FieldDescription>
+                        ) : null}
+                      </FieldContent>
+                    </Field>
+                  ) : null}
+
                   <Field>
                     <FieldLabel>Nome de exibição</FieldLabel>
                     <FieldContent>
@@ -1220,20 +1473,80 @@ export function MessagingWorkspace() {
                   </Field>
 
                   <Field>
-                    <FieldLabel>Sender ID</FieldLabel>
+                    <FieldLabel>
+                      {getSenderField("sender_id")?.label ?? "Sender ID"}
+                    </FieldLabel>
                     <FieldContent>
                       <Input
                         value={senderIdentifier}
                         onChange={(event) => {
                           setSenderIdentifier(event.target.value);
                         }}
-                        placeholder="whatsapp:+5511999999999"
+                        placeholder={
+                          getSenderField("sender_id")?.placeholder ??
+                          "whatsapp:+5511999999999"
+                        }
                       />
                       <FieldDescription>
-                        Opcional. Se vazio, o backend usa o número informado.
+                        {getSenderField("sender_id")?.description ??
+                          "Opcional. Se vazio, o backend usa o número informado."}
                       </FieldDescription>
                     </FieldContent>
                   </Field>
+
+                  {getSenderField("messaging_service_sid") ? (
+                    <Field>
+                      <FieldLabel>
+                        {getSenderField("messaging_service_sid")?.label ??
+                          "Messaging Service SID"}
+                      </FieldLabel>
+                      <FieldContent>
+                        <Input
+                          value={senderMessagingServiceSid}
+                          onChange={(event) => {
+                            setSenderMessagingServiceSid(event.target.value);
+                          }}
+                          placeholder={
+                            getSenderField("messaging_service_sid")
+                              ?.placeholder ?? "Opcional"
+                          }
+                        />
+                        {getSenderField("messaging_service_sid")
+                          ?.description ? (
+                          <FieldDescription>
+                            {
+                              getSenderField("messaging_service_sid")
+                                ?.description
+                            }
+                          </FieldDescription>
+                        ) : null}
+                      </FieldContent>
+                    </Field>
+                  ) : null}
+
+                  {getSenderField("waba_id") ? (
+                    <Field>
+                      <FieldLabel>
+                        {getSenderField("waba_id")?.label ?? "WABA ID"}
+                      </FieldLabel>
+                      <FieldContent>
+                        <Input
+                          value={senderWabaId}
+                          onChange={(event) => {
+                            setSenderWabaId(event.target.value);
+                          }}
+                          placeholder={
+                            getSenderField("waba_id")?.placeholder ?? "Opcional"
+                          }
+                        />
+                        {getSenderField("waba_id")?.description ? (
+                          <FieldDescription>
+                            {getSenderField("waba_id")?.description}
+                          </FieldDescription>
+                        ) : null}
+                      </FieldContent>
+                    </Field>
+                  ) : null}
 
                   <Button
                     type="submit"

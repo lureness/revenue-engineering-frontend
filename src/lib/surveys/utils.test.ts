@@ -5,6 +5,7 @@ import {
   buildPublicSurveyResumePath,
   buildPublicSurveyUrl,
   buildSurveyIframeSnippet,
+  buildTypebotViewerUrl,
   getCurrentSurveyQuestion,
   getQuestionNumber,
   getSelectedOptionId,
@@ -82,6 +83,22 @@ describe("survey utils", () => {
         height: 1200,
       }),
     ).toContain('src="https://app.lureness.com/surveys/basix/ier"');
+  });
+
+  it("builds a typebot viewer url with forwarded params", () => {
+    const params = new URLSearchParams({
+      utm_source: "meta",
+      utm_campaign: "diagnostico-q2",
+    });
+
+    expect(
+      buildTypebotViewerUrl({
+        publicUrl: "https://bot.lureness.com/public-id",
+        searchParams: params,
+      }),
+    ).toBe(
+      "https://bot.lureness.com/public-id?utm_source=meta&utm_campaign=diagnostico-q2",
+    );
   });
 
   it("returns the first unanswered question", () => {

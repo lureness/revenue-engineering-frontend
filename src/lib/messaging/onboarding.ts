@@ -1,23 +1,16 @@
-export function shouldRedirectToProviderSetup(pathname: string) {
-  if (!pathname.startsWith("/app")) {
-    return false;
+export type ProviderSetupStep = "provider_account" | "sender" | "ready";
+
+export function resolveProviderSetupStep(args: {
+  hasProviderAccount: boolean;
+  hasSender: boolean;
+}): ProviderSetupStep {
+  if (!args.hasProviderAccount) {
+    return "provider_account";
   }
 
-  if (pathname.startsWith("/app/messaging")) {
-    return false;
+  if (!args.hasSender) {
+    return "sender";
   }
 
-  if (pathname.startsWith("/app/contacts")) {
-    return false;
-  }
-
-  if (pathname.startsWith("/app/surveys")) {
-    return false;
-  }
-
-  if (pathname === "/app/user") {
-    return false;
-  }
-
-  return true;
+  return "ready";
 }

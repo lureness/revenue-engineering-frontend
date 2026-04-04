@@ -1,5 +1,7 @@
 import { apiRequest } from "@/lib/api/client";
 import type {
+  AgentRunItem,
+  AgentRunSummaryItem,
   AssignConversationPayload,
   ConversationActionResponse,
   CreateStandardMessagePayload,
@@ -122,6 +124,28 @@ export async function sendInboxConversationMessage(
     {
       method: "POST",
       body: payload,
+      cache: "no-store",
+    },
+  );
+}
+
+export async function getLatestInboxConversationAnalysis(
+  conversationId: string,
+) {
+  return apiRequest<AgentRunSummaryItem | null>(
+    `/inbox/conversations/${conversationId}/analysis/latest`,
+    {
+      method: "GET",
+      cache: "no-store",
+    },
+  );
+}
+
+export async function rerunInboxConversationAnalysis(conversationId: string) {
+  return apiRequest<AgentRunItem>(
+    `/inbox/conversations/${conversationId}/analysis`,
+    {
+      method: "POST",
       cache: "no-store",
     },
   );

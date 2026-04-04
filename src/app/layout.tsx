@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Cormorant_Garamond, IBM_Plex_Mono, Inter } from "next/font/google";
 
+import { NextDevtoolsShortcutGuard } from "@/components/dev/next-devtools-shortcut-guard";
 import { AppProviders } from "@/components/providers/app-providers";
 
 import "./globals.css";
@@ -50,6 +51,7 @@ export default function RootLayout({
       <body
         className={`${fontSans.variable} ${fontSerif.variable} ${fontMono.variable} min-h-screen antialiased`}
       >
+        <NextDevtoolsShortcutGuard />
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

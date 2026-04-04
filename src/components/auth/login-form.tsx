@@ -28,7 +28,6 @@ import {
   isApiErrorDetail,
 } from "@/lib/api/error-messages";
 import { resendVerificationEmail } from "@/lib/auth/api";
-import { resolveSafeRedirectPath } from "@/lib/auth/navigation";
 import { isValidEmail, isValidPasswordLength } from "@/lib/auth/validation";
 
 export function LoginForm() {
@@ -86,15 +85,19 @@ export function LoginForm() {
     setCanResendVerification(false);
 
     try {
-      await signIn({
+      const session = await signIn({
         email: normalizedEmail,
         password,
       });
 
+      const finalSlug = session?.tenant?.slug;
+
       startTransition(() => {
-        router.replace(
-          resolveSafeRedirectPath(searchParams.get("redirectTo"), "/app"),
-        );
+        if (finalSlug) {
+          router.replace(`/workspace/${finalSlug}`);
+        } else {
+          router.replace("/workspace/[slug]");
+        }
       });
     } catch (error) {
       setCanResendVerification(
@@ -142,7 +145,7 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="glow-border w-full rounded-[2rem] bg-card shadow-md">
+    <Card className="glow-border w-full rounded-4xl bg-card shadow-md">
       <CardHeader className="gap-3 px-6 pt-6 md:px-7 md:pt-7">
         <Badge variant="secondary" className="w-fit">
           Login

@@ -1,23 +1,32 @@
 import { describe, expect, it } from "vitest";
 
-import { shouldRedirectToProviderSetup } from "@/lib/messaging/onboarding";
+import { resolveProviderSetupStep } from "@/lib/messaging/onboarding";
 
-describe("shouldRedirectToProviderSetup", () => {
-  it("redireciona rotas internas do app que dependem do setup inicial", () => {
-    expect(shouldRedirectToProviderSetup("/app")).toBe(true);
-    expect(shouldRedirectToProviderSetup("/app/teams")).toBe(true);
-    expect(shouldRedirectToProviderSetup("/app/rbac")).toBe(true);
+describe("resolveProviderSetupStep", () => {
+  it("prioriza a criacao da conta de provedor quando ela ainda nao existe", () => {
+    expect(
+      resolveProviderSetupStep({
+        hasProviderAccount: false,
+        hasSender: false,
+      }),
+    ).toBe("provider_account");
   });
 
-  it("não redireciona a área de mensageria nem conta do usuário", () => {
-    expect(shouldRedirectToProviderSetup("/app/messaging")).toBe(false);
-    expect(shouldRedirectToProviderSetup("/app/messaging/senders")).toBe(false);
-    expect(shouldRedirectToProviderSetup("/app/contacts")).toBe(false);
-    expect(shouldRedirectToProviderSetup("/app/user")).toBe(false);
+  it("avanca para sender quando a conta de provedor ja existe", () => {
+    expect(
+      resolveProviderSetupStep({
+        hasProviderAccount: true,
+        hasSender: false,
+      }),
+    ).toBe("sender");
   });
 
-  it("ignora rotas públicas", () => {
-    expect(shouldRedirectToProviderSetup("/login")).toBe(false);
-    expect(shouldRedirectToProviderSetup("/signup")).toBe(false);
+  it("marca o setup como pronto quando conta e sender ja existem", () => {
+    expect(
+      resolveProviderSetupStep({
+        hasProviderAccount: true,
+        hasSender: true,
+      }),
+    ).toBe("ready");
   });
 });

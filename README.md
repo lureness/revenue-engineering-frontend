@@ -9,6 +9,31 @@ cp .env.example .env.local
 npm run dev
 ```
 
+## Deploy no Railway
+
+O repositório `frontend` já está preparado para subir como um serviço próprio no Railway com:
+
+- `output: "standalone"` no Next.js
+- `Dockerfile` multi-stage
+- `railway.json` com healthcheck
+- rota de health em `/api/health`
+
+Variáveis mínimas:
+
+```bash
+NEXT_PUBLIC_API_BASE_URL=https://seu-backend.up.railway.app/api/v1
+API_BASE_URL=https://seu-backend.up.railway.app/api/v1
+NEXT_PUBLIC_TYPEBOT_BUILDER_URL=
+NEXT_PUBLIC_DIAGNOSTICO_TENANT_SLUG=
+NEXT_PUBLIC_DIAGNOSTICO_SURVEY_SLUG=
+```
+
+Healthcheck no Railway:
+
+```bash
+/api/health
+```
+
 ## Variáveis de ambiente
 
 ```bash
@@ -19,7 +44,7 @@ API_BASE_URL=http://127.0.0.1:8000/api/v1
 ## Estrutura inicial
 
 - `/`: landing page pública
-- `/app`: shell da área autenticada
+- `/workspace`: shell da área autenticada
 - `src/lib/api/client.ts`: cliente HTTP apontando para o proxy interno do Next
 - `src/app/api/backend/[...path]/route.ts`: camada BFF para cookies httpOnly e refresh
 - `src/proxy.ts`: proteção inicial de rotas privadas no servidor

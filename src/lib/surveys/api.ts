@@ -1,6 +1,7 @@
 import { apiRequest } from "@/lib/api/client";
 import type {
   CompleteSurveySubmissionPayload,
+  CreateTypebotSurveyTemplatePayload,
   PublicSurveySubmissionItem,
   PublicSurveyTemplateItem,
   StartSurveySubmissionPayload,
@@ -20,6 +21,16 @@ export async function getSurveyTemplates() {
 export async function bootstrapIerSurveyTemplate() {
   return apiRequest<SurveyTemplateItem>("/surveys/templates/bootstrap/ier", {
     method: "POST",
+    cache: "no-store",
+  });
+}
+
+export async function createTypebotSurveyTemplate(
+  payload: CreateTypebotSurveyTemplatePayload,
+) {
+  return apiRequest<SurveyTemplateItem>("/surveys/templates/typebot", {
+    method: "POST",
+    body: payload,
     cache: "no-store",
   });
 }

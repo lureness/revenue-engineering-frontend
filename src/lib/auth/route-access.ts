@@ -5,7 +5,7 @@ export const PUBLIC_ONLY_AUTH_ROUTES = [
   "/reset-password",
 ] as const;
 
-export const PROTECTED_APP_ROUTE_PREFIXES = ["/app"] as const;
+export const PROTECTED_APP_ROUTE_PREFIXES = ["/workspace"] as const;
 
 export function isProtectedAppRoute(pathname: string) {
   return PROTECTED_APP_ROUTE_PREFIXES.some(

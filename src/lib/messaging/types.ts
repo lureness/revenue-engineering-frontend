@@ -1,4 +1,4 @@
-export type ProviderName = "meta";
+export type ProviderName = string;
 export type ProviderMode = "managed" | "byo";
 export type ProviderStatus = "draft" | "active" | "inactive" | "error";
 
@@ -74,9 +74,41 @@ export type MessageItem = {
 export type CreateWhatsAppSenderPayload = {
   provider_account_id: string;
   phone_number: string;
+  sender_sid?: string;
   sender_id?: string;
+  messaging_service_sid?: string;
+  waba_id?: string;
   display_name?: string;
   is_default?: boolean;
+};
+
+export type CreateProviderAccountPayload = {
+  provider?: ProviderName;
+  mode?: ProviderMode;
+  status?: ProviderStatus;
+  account_sid: string;
+  api_key_sid?: string;
+  secret_ref?: string;
+  configuration?: Record<string, unknown>;
+};
+
+export type MessagingProviderFieldItem = {
+  key: string;
+  label: string;
+  required: boolean;
+  secret: boolean;
+  placeholder: string | null;
+  description: string | null;
+};
+
+export type MessagingProviderItem = {
+  code: string;
+  label: string;
+  status: string;
+  supported_channels: string[];
+  provider_account_fields: MessagingProviderFieldItem[];
+  whatsapp_sender_fields: MessagingProviderFieldItem[];
+  notes: string | null;
 };
 
 export type MessageFilters = {

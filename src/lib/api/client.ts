@@ -37,6 +37,10 @@ export class ApiClientError extends Error {
   }
 }
 
+export function isUnauthorizedApiError(error: unknown) {
+  return error instanceof ApiClientError && error.status === 401;
+}
+
 function buildApiUrl(path: string, query?: Record<string, QueryValue>) {
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   const url = new URL(`/api/backend${normalizedPath}`, "http://local.test");
@@ -145,7 +149,12 @@ export async function apiRequest<TResponse>(
 
   if (!response.ok) {
     if (response.status === 401) {
-      dispatchAuthUnauthorizedEvent();
+      dispatchAuthUnauthorizedEvent({
+        status: response.status,
+        message: extractErrorMessage(payload, response.status),
+        requestId: response.headers.get("X-Request-ID"),
+        path,
+      });
     }
 
     throw new ApiClientError({

@@ -3,12 +3,16 @@
 import {
   Activity,
   BookUser,
+  Bot,
+  ChevronDown,
   ChevronRight,
   FileText,
   Inbox,
+  KeyRound,
   Layers3,
   Lock,
   LogOut,
+  Magnet,
   Menu,
   MessageCircleMore,
   PanelLeftClose,
@@ -25,7 +29,6 @@ import { useAccess } from "@/components/access/access-provider";
 import { LurenessMark } from "@/components/brand/lureness-mark";
 import { ThemeToggle } from "@/components/theme/theme-toggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -47,10 +50,14 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import {
+  TENANT_AGENTS_MANAGE_PERMISSION,
+  TENANT_AGENTS_READ_PERMISSION,
   TENANT_AUDIT_LOGS_READ_PERMISSION,
   TENANT_CONTACTS_MANAGE_PERMISSION,
   TENANT_CONTACTS_READ_PERMISSION,
   TENANT_CONVERSATIONS_READ_PERMISSION,
+  TENANT_LANDING_PAGES_MANAGE_PERMISSION,
+  TENANT_LANDING_PAGES_READ_PERMISSION,
   TENANT_MEMBERS_READ_PERMISSION,
   TENANT_MESSAGES_READ_PERMISSION,
   TENANT_METRICS_READ_PERMISSION,
@@ -62,122 +69,226 @@ import {
 } from "@/lib/rbac/permissions";
 import { cn } from "@/lib/utils";
 
-const navigationItems = [
+type NavItem = {
+  title: string;
+  href: string;
+  icon: typeof Layers3;
+  match: "exact" | "prefix";
+  permission?: string;
+  hasChildren?: boolean;
+  childOf?: string;
+};
+
+const navigationItems: NavItem[] = [
   {
-    title: "Dashboard",
-    href: "/app",
+    title: "Workspace",
+    href: "/workspace/[slug]",
     icon: Layers3,
-    status: "ativo",
     match: "exact",
+    permission: TENANT_METRICS_READ_PERMISSION,
   },
   {
     title: "Inbox",
-    href: "/app/inbox",
+    href: "/workspace/[slug]/inbox",
     icon: Inbox,
-    status: "ativo",
     match: "prefix",
-  },
-  {
-    title: "Times",
-    href: "/app/teams",
-    icon: UsersRound,
-    status: "ativo",
-    match: "prefix",
+    permission: TENANT_CONVERSATIONS_READ_PERMISSION,
+    hasChildren: true,
   },
   {
     title: "Contatos",
-    href: "/app/contacts",
+    href: "/workspace/[slug]/inbox/contacts",
     icon: BookUser,
-    status: "ativo",
+    match: "prefix",
+    permission:
+      TENANT_CONTACTS_READ_PERMISSION || TENANT_CONTACTS_MANAGE_PERMISSION,
+    childOf: "/workspace/[slug]/inbox",
+  },
+  {
+    title: "Agents",
+    href: "/workspace/[slug]/inbox/agents",
+    icon: Bot,
+    match: "prefix",
+    permission:
+      TENANT_AGENTS_READ_PERMISSION || TENANT_AGENTS_MANAGE_PERMISSION,
+    childOf: "/workspace/[slug]/inbox",
+  },
+  {
+    title: "Mensagens",
+    href: "/workspace/[slug]/inbox/messages",
+    icon: MessageCircleMore,
+    match: "prefix",
+    permission:
+      TENANT_MESSAGES_READ_PERMISSION ||
+      TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION ||
+      TENANT_WHATSAPP_SENDERS_READ_PERMISSION,
+    childOf: "/workspace/[slug]/inbox",
+  },
+  {
+    title: "Times",
+    href: "/workspace/[slug]/teams",
+    icon: UsersRound,
     match: "prefix",
   },
   {
     title: "Surveys",
-    href: "/app/surveys",
+    href: "/workspace/[slug]/surveys",
     icon: FileText,
-    status: "ativo",
+    match: "prefix",
+    permission:
+      TENANT_SURVEYS_READ_PERMISSION || TENANT_SURVEYS_MANAGE_PERMISSION,
+  },
+  {
+    title: "LPs",
+    href: "/workspace/[slug]/lp",
+    icon: Layers3,
+    match: "prefix",
+    hasChildren: true,
+    permission:
+      TENANT_LANDING_PAGES_READ_PERMISSION ||
+      TENANT_LANDING_PAGES_MANAGE_PERMISSION,
+  },
+  {
+    title: "Criar",
+    href: "/workspace/[slug]/lp/create",
+    icon: FileText,
+    match: "prefix",
+    permission:
+      TENANT_LANDING_PAGES_READ_PERMISSION ||
+      TENANT_LANDING_PAGES_MANAGE_PERMISSION,
+    childOf: "/workspace/[slug]/lp",
+  },
+  {
+    title: "Iscas",
+    href: "/workspace/[slug]/hooks",
+    icon: Magnet,
     match: "prefix",
   },
   {
-    title: "Mensageria",
-    href: "/app/messaging",
-    icon: MessageCircleMore,
-    status: "ativo",
+    title: "Configurações",
+    href: "/workspace/[slug]/settings",
+    icon: Settings,
     match: "prefix",
+    hasChildren: true,
+  },
+  {
+    title: "Minha conta",
+    href: "/workspace/[slug]/settings/account",
+    icon: KeyRound,
+    match: "prefix",
+    childOf: "/workspace/[slug]/settings",
   },
   {
     title: "Observabilidade",
-    href: "/app/observability",
+    href: "/workspace/[slug]/settings/observability",
     icon: Activity,
-    status: "ativo",
     match: "prefix",
+    permission:
+      TENANT_METRICS_READ_PERMISSION || TENANT_AUDIT_LOGS_READ_PERMISSION,
+    childOf: "/workspace/[slug]/settings",
   },
   {
     title: "RBAC",
-    href: "/app/rbac",
+    href: "/workspace/[slug]/settings/rbac",
     icon: ShieldCheck,
-    status: "ativo",
     match: "exact",
+    permission:
+      TENANT_MEMBERS_READ_PERMISSION || TENANT_PERMISSIONS_MANAGE_PERMISSION,
+    childOf: "/workspace/[slug]/settings",
   },
-] as const;
+];
 
-const pageContentMap = {
-  "/app": {
-    eyebrow: "Dashboard",
-    title: "Observabilidade do workspace",
-    description:
-      "Acompanhe tráfego, saúde operacional e sinais do produto a partir das métricas da API.",
+const pageContentMap: Record<
+  string,
+  { eyebrow: string; title: string; description: string }
+> = {
+  "/workspace/[slug]": {
+    eyebrow: "Workspace",
+    title: "Workspace overview",
+    description: "Visão geral das métricas e indicadores do seu workspace.",
   },
-  "/app/user": {
+  "/workspace/[slug]/settings/account": {
     eyebrow: "Usuário",
     title: "Conta e preferências",
     description: "Gerencie a senha e os ajustes da sua conta autenticada.",
   },
-  "/app/teams": {
+  "/workspace/[slug]/settings": {
+    eyebrow: "Configurações",
+    title: "Ajustes do workspace",
+    description:
+      "Centralize preferências da conta, observabilidade e governança de acesso em um único lugar.",
+  },
+  "/workspace/[slug]/teams": {
     eyebrow: "Times",
     title: "Gestão de times",
     description: "Crie times, acompanhe membros e administre invites ativos.",
   },
-  "/app/contacts": {
+  "/workspace/[slug]/inbox/agents": {
+    eyebrow: "Agents",
+    title: "Especialistas e agentes do inbox",
+    description:
+      "Gerencie os agentes que apoiam o atendimento, o pós-survey e o contexto das conversas.",
+  },
+  "/workspace/[slug]/inbox/contacts": {
     eyebrow: "Contatos",
     title: "Base de contatos do workspace",
     description:
       "Construa a audiência que vai sustentar conversas, inbox, automações e futuras ações de CRM.",
   },
-  "/app/surveys": {
+  "/workspace/[slug]/surveys": {
     eyebrow: "Surveys",
     title: "Diagnósticos públicos e captação",
     description:
       "Instale templates, publique quizzes e transforme tráfego em lead qualificado com contexto para o inbox.",
   },
-  "/app/inbox": {
+  "/workspace/[slug]/lp": {
+    eyebrow: "LPs",
+    title: "Landing pages do workspace",
+    description:
+      "Crie, organize e refine landing pages para campanhas, iscas e captação de leads diretamente dentro do produto.",
+  },
+  "/workspace/[slug]/lp/create": {
+    eyebrow: "LPs",
+    title: "Criar landing page",
+    description:
+      "Monte a LP no editor visual drag-and-drop e refine o rascunho antes da publicação.",
+  },
+  "/workspace/[slug]/hooks": {
+    eyebrow: "Iscas",
+    title: "Iscas digitais e materiais de captação",
+    description:
+      "Organize ebooks, planilhas, checklists e outros materiais usados para atrair leads e enriquecer campanhas.",
+  },
+  "/workspace/[slug]/inbox": {
     eyebrow: "Inbox",
     title: "Operação de conversas",
     description:
       "Centralize o histórico por contato, distribua a operação e responda no canal certo.",
   },
-  "/app/messaging": {
-    eyebrow: "Mensageria",
-    title: "Operação de mensagens",
+  "/workspace/[slug]/inbox/messages": {
+    eyebrow: "Mensagens",
+    title: "Histórico de mensagens",
     description:
-      "Conecte provedores, acompanhe senders do WhatsApp e revise o histórico de mensagens.",
+      "Acompanhe todas as mensagens enviadas e recebidas via WhatsApp, email e SMS.",
   },
-  "/app/observability": {
+  "/workspace/[slug]/settings/observability": {
     eyebrow: "Observabilidade",
     title: "Drilldowns e saúde operacional",
     description:
       "Explore métricas, erros e atividade por entidade para investigar a operação do workspace.",
   },
-  "/app/rbac": {
+  "/workspace/[slug]/settings/rbac": {
     eyebrow: "RBAC",
     title: "Governança de acesso",
     description:
       "Administre roles globais, grants diretos e permissões efetivas do workspace.",
   },
-} as const;
+};
 
 type AppShellProps = {
   children: ReactNode;
+  workspaceBanner?: ReactNode;
+  tenantSlug?: string;
   tenantName?: string;
   userEmail?: string;
   userRole?: string;
@@ -189,6 +300,7 @@ type SidebarContentProps = {
   collapsed?: boolean;
   mobile?: boolean;
   onCollapse?: () => void;
+  tenantSlug?: string;
   tenantName?: string;
   userEmail?: string;
   userRole?: string;
@@ -215,25 +327,291 @@ function getUserInitials(userEmail?: string) {
   return localPart.slice(0, 2).toUpperCase() || "U";
 }
 
-function isNavigationItemActive(
-  pathname: string,
-  item: (typeof navigationItems)[number],
-) {
-  if (!item.href.startsWith("/")) {
-    return false;
-  }
+function isNavItemActive(pathname: string, item: NavItem, slug: string) {
+  const href = item.href.replace("[slug]", slug);
 
   if (item.match === "exact") {
-    return pathname === item.href;
+    return pathname === href;
   }
 
-  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+function NavItemComponent({
+  item,
+  slug,
+  collapsed,
+  pathname,
+  isLocked,
+  layout = "default",
+  isExpanded = false,
+  onToggleChildren,
+}: {
+  item: NavItem;
+  slug: string;
+  collapsed: boolean;
+  pathname: string;
+  isLocked: boolean;
+  layout?: "default" | "hero" | "child";
+  isExpanded?: boolean;
+  onToggleChildren?: () => void;
+}) {
+  const Icon = item.icon;
+  const href = item.href.replace("[slug]", slug);
+  const isActive = isNavItemActive(pathname, item, slug);
+  const isChild = layout === "child";
+  const isTopLevel = !isChild;
+  const showToggle = !collapsed && !!item.hasChildren && !!onToggleChildren;
+
+  const itemClassName = cn(
+    "group relative flex w-full transition-all duration-200",
+    collapsed
+      ? "size-10 items-center justify-center"
+      : isTopLevel
+        ? "min-h-14 items-center gap-4 rounded-[1.6rem] px-5 py-3.5"
+        : "min-h-12 items-center gap-3.5 rounded-[1.15rem] px-4 py-3",
+    isTopLevel
+      ? isActive
+        ? "border border-foreground bg-foreground text-background shadow-[0_14px_30px_-22px_rgba(0,0,0,0.8)]"
+        : "border border-border/70 bg-card text-foreground shadow-sm hover:border-foreground/10 hover:bg-card/95"
+      : isActive
+        ? "bg-background text-foreground shadow-sm"
+        : "text-foreground hover:bg-background/80",
+    isLocked && "opacity-50",
+  );
+
+  if (collapsed) {
+    return (
+      <Link
+        href={href}
+        className={itemClassName}
+        title={isLocked ? `${item.title} · restrito` : item.title}
+        aria-label={item.title}
+      >
+        <Icon className="size-4 shrink-0" />
+      </Link>
+    );
+  }
+
+  if (showToggle) {
+    return (
+      <div className={itemClassName}>
+        <Link
+          href={href}
+          className="flex min-w-0 flex-1 items-center gap-4"
+          aria-current={isActive ? "page" : undefined}
+        >
+          <Icon className={cn("size-4 shrink-0")} />
+          <span className="flex-1 truncate font-medium text-sm">
+            {item.title}
+          </span>
+        </Link>
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon-sm"
+          className={cn(
+            "-mr-1 h-8 w-8 rounded-full text-current hover:text-current",
+            isActive
+              ? "text-background/80 hover:bg-background/10"
+              : "text-muted-foreground hover:bg-accent/60 hover:text-foreground",
+          )}
+          onClick={onToggleChildren}
+          aria-label={isExpanded ? "Fechar submenu" : "Abrir submenu"}
+          title={isExpanded ? "Fechar submenu" : "Abrir submenu"}
+        >
+          <ChevronDown
+            className={cn(
+              "size-4 transition-transform",
+              isExpanded && "rotate-180",
+            )}
+          />
+        </Button>
+        {isLocked && (
+          <Lock
+            className={cn(
+              "shrink-0",
+              isTopLevel || isChild ? "size-4" : "size-3.5",
+              isActive && isTopLevel
+                ? "text-background/70"
+                : "text-muted-foreground",
+            )}
+          />
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className={itemClassName}
+      aria-current={isActive ? "page" : undefined}
+    >
+      <Icon className="size-4 shrink-0" />
+      <span className="flex-1 truncate font-medium text-sm">{item.title}</span>
+      {isLocked && (
+        <Lock
+          className={cn(
+            "shrink-0",
+            isTopLevel || isChild ? "size-4" : "size-3.5",
+            isActive && isTopLevel
+              ? "text-background/70"
+              : "text-muted-foreground",
+          )}
+        />
+      )}
+    </Link>
+  );
+}
+
+function NavigationItems({
+  slug,
+  collapsed,
+  pathname,
+  hasPermission,
+}: {
+  slug: string;
+  collapsed: boolean;
+  pathname: string;
+  hasPermission: (permission?: string) => boolean;
+}) {
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>(
+    {},
+  );
+
+  const visibleItems = navigationItems.filter(
+    (item) => !item.permission || hasPermission(item.permission),
+  );
+  const rootItems = visibleItems.filter((item) => !item.childOf);
+  const childItemsByParent = visibleItems.reduce<Record<string, NavItem[]>>(
+    (accumulator, item) => {
+      if (item.childOf) {
+        accumulator[item.childOf] ??= [];
+        accumulator[item.childOf]?.push(item);
+      }
+
+      return accumulator;
+    },
+    {},
+  );
+
+  const isItemExpanded = (item: NavItem) => {
+    if (item.href in expandedItems) {
+      return expandedItems[item.href];
+    }
+
+    return (
+      isNavItemActive(pathname, item, slug) ||
+      (childItemsByParent[item.href] ?? []).some((child) =>
+        isNavItemActive(pathname, child, slug),
+      )
+    );
+  };
+
+  if (collapsed) {
+    return (
+      <div className="flex flex-col items-center gap-1">
+        {rootItems.map((item) => (
+          <NavItemComponent
+            key={item.href}
+            item={item}
+            slug={slug}
+            collapsed
+            pathname={pathname}
+            isLocked={false}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      {rootItems.map((item) => {
+        const childItems = childItemsByParent[item.href] ?? [];
+
+        if (item.hasChildren && childItems.length > 0) {
+          const isExpanded = isItemExpanded(item);
+
+          return (
+            <div key={item.href}>
+              {isExpanded ? (
+                <div className="isolate flex flex-col items-center space-y-1.5">
+                  <div className="relative z-10 w-full">
+                    <NavItemComponent
+                      item={item}
+                      slug={slug}
+                      collapsed={collapsed}
+                      pathname={pathname}
+                      isLocked={false}
+                      layout="hero"
+                      isExpanded={isExpanded}
+                      onToggleChildren={() =>
+                        setExpandedItems((current) => ({
+                          ...current,
+                          [item.href]: false,
+                        }))
+                      }
+                    />
+                  </div>
+                  <div className="relative z-0 -mt-3 w-[calc(100%-1.25rem)] rounded-[1.5rem] bg-secondary/70 px-3 pb-3 pt-4">
+                    <div className="flex flex-col gap-1.5">
+                      {childItems.map((childItem) => (
+                        <NavItemComponent
+                          key={childItem.href}
+                          item={childItem}
+                          slug={slug}
+                          collapsed={collapsed}
+                          pathname={pathname}
+                          isLocked={false}
+                          layout="child"
+                        />
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <NavItemComponent
+                  item={item}
+                  slug={slug}
+                  collapsed={collapsed}
+                  pathname={pathname}
+                  isLocked={false}
+                  layout="hero"
+                  isExpanded={false}
+                  onToggleChildren={() =>
+                    setExpandedItems((current) => ({
+                      ...current,
+                      [item.href]: true,
+                    }))
+                  }
+                />
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <NavItemComponent
+            key={item.href}
+            item={item}
+            slug={slug}
+            collapsed={collapsed}
+            pathname={pathname}
+            isLocked={false}
+          />
+        );
+      })}
+    </div>
+  );
 }
 
 function SidebarContent({
   collapsed = false,
   mobile = false,
   onCollapse,
+  tenantSlug = "",
   tenantName,
   userEmail,
   userRole,
@@ -244,57 +622,11 @@ function SidebarContent({
   const pathname = usePathname();
   const { hasTenantPermission, status: accessStatus } = useAccess();
 
-  function isNavigationItemLocked(item: (typeof navigationItems)[number]) {
-    if (accessStatus !== "ready") {
-      return false;
-    }
-
-    if (item.href === "/app") {
-      return !hasTenantPermission(TENANT_METRICS_READ_PERMISSION);
-    }
-
-    if (item.href === "/app/rbac") {
-      return !(
-        hasTenantPermission(TENANT_MEMBERS_READ_PERMISSION) ||
-        hasTenantPermission(TENANT_PERMISSIONS_MANAGE_PERMISSION)
-      );
-    }
-
-    if (item.title === "Mensageria") {
-      return !(
-        hasTenantPermission(TENANT_MESSAGES_READ_PERMISSION) ||
-        hasTenantPermission(TENANT_PROVIDER_ACCOUNTS_READ_PERMISSION) ||
-        hasTenantPermission(TENANT_WHATSAPP_SENDERS_READ_PERMISSION)
-      );
-    }
-
-    if (item.title === "Contatos") {
-      return !(
-        hasTenantPermission(TENANT_CONTACTS_READ_PERMISSION) ||
-        hasTenantPermission(TENANT_CONTACTS_MANAGE_PERMISSION)
-      );
-    }
-
-    if (item.title === "Surveys") {
-      return !(
-        hasTenantPermission(TENANT_SURVEYS_READ_PERMISSION) ||
-        hasTenantPermission(TENANT_SURVEYS_MANAGE_PERMISSION)
-      );
-    }
-
-    if (item.title === "Inbox") {
-      return !hasTenantPermission(TENANT_CONVERSATIONS_READ_PERMISSION);
-    }
-
-    if (item.title === "Observabilidade") {
-      return !(
-        hasTenantPermission(TENANT_METRICS_READ_PERMISSION) ||
-        hasTenantPermission(TENANT_AUDIT_LOGS_READ_PERMISSION)
-      );
-    }
-
-    return false;
-  }
+  const hasPermission = (permission?: string) => {
+    if (accessStatus !== "ready") return true;
+    if (!permission) return true;
+    return hasTenantPermission(permission);
+  };
 
   return (
     <div className="flex h-full flex-col gap-6">
@@ -305,7 +637,7 @@ function SidebarContent({
             collapsed ? "justify-center" : undefined,
           )}
         >
-          <LurenessMark compact={collapsed} subtitle="Application Workspace" />
+          <LurenessMark compact={collapsed} subtitle="Revenue Intelligence" />
           {!collapsed && onCollapse ? (
             <div className="flex justify-center">
               <Button
@@ -323,108 +655,17 @@ function SidebarContent({
       )}
 
       <nav
-        className={cn("grid gap-2", collapsed ? "justify-center" : undefined)}
+        className={cn(
+          "flex flex-col gap-2",
+          collapsed ? "items-center" : undefined,
+        )}
       >
-        {navigationItems.map((item) => {
-          const Icon = item.icon;
-          const isNavigable = item.href.startsWith("/");
-          const isActive = isNavigationItemActive(pathname, item);
-          const isLocked = isNavigationItemLocked(item);
-          const itemClassName = cn(
-            "flex rounded-2xl border transition-colors",
-            collapsed
-              ? "size-12 items-center justify-center"
-              : "items-center justify-between px-4 py-3",
-            isActive
-              ? "border-foreground/10 bg-foreground text-background shadow-sm"
-              : "border-transparent bg-transparent text-foreground hover:border-border/70 hover:text-primary",
-          );
-          const iconNode = <Icon className="size-4 shrink-0" />;
-
-          if (collapsed) {
-            const collapsedIcon = (
-              <span className="relative inline-flex items-center justify-center">
-                {iconNode}
-                {isLocked ? (
-                  <span
-                    className={cn(
-                      "absolute -right-1 -bottom-1 inline-flex size-4 items-center justify-center rounded-full border",
-                      isActive
-                        ? "border-foreground/20 bg-background text-foreground"
-                        : "border-border/70 bg-background text-muted-foreground",
-                    )}
-                  >
-                    <Lock className="size-2.5" />
-                  </span>
-                ) : null}
-              </span>
-            );
-
-            if (!isNavigable) {
-              return (
-                <div
-                  key={item.title}
-                  className={itemClassName}
-                  title={isLocked ? `${item.title} · restrito` : item.title}
-                >
-                  {collapsedIcon}
-                </div>
-              );
-            }
-
-            return (
-              <Link
-                key={item.title}
-                href={item.href}
-                className={itemClassName}
-                title={isLocked ? `${item.title} · restrito` : item.title}
-                aria-label={item.title}
-              >
-                {collapsedIcon}
-              </Link>
-            );
-          }
-
-          const content = (
-            <>
-              <span className="flex items-center gap-3">
-                {iconNode}
-                <span className="flex items-center gap-2">
-                  <span className="text-sm font-medium">{item.title}</span>
-                  {isLocked ? (
-                    <Lock
-                      className={cn(
-                        "size-3.5",
-                        isActive
-                          ? "text-background/80"
-                          : "text-muted-foreground",
-                      )}
-                    />
-                  ) : null}
-                </span>
-              </span>
-              {isActive ? (
-                <span className="pointer-events-none">
-                  <Badge variant="secondary">{item.status}</Badge>
-                </span>
-              ) : null}
-            </>
-          );
-
-          if (!isNavigable) {
-            return (
-              <div key={item.title} className={itemClassName}>
-                {content}
-              </div>
-            );
-          }
-
-          return (
-            <Link key={item.title} href={item.href} className={itemClassName}>
-              {content}
-            </Link>
-          );
-        })}
+        <NavigationItems
+          slug={tenantSlug}
+          collapsed={collapsed}
+          pathname={pathname}
+          hasPermission={hasPermission}
+        />
       </nav>
 
       {collapsed ? (
@@ -438,15 +679,18 @@ function SidebarContent({
                   className="size-12 rounded-2xl p-0"
                   aria-label="Abrir menu da conta"
                   title="Abrir menu da conta"
-                />
+                >
+                  <Avatar
+                    size="sm"
+                    className="pointer-events-none after:hidden"
+                  >
+                    <AvatarFallback className="bg-foreground text-xs font-medium text-background">
+                      {userInitials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Button>
               }
-            >
-              <Avatar size="sm" className="pointer-events-none after:hidden">
-                <AvatarFallback className="bg-foreground text-xs font-medium text-background">
-                  {userInitials}
-                </AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
+            />
             <DropdownMenuContent
               side="right"
               align="center"
@@ -465,7 +709,11 @@ function SidebarContent({
                 </DropdownMenuLabel>
               </DropdownMenuGroup>
               <DropdownMenuSeparator />
-              <DropdownMenuItem render={<Link href="/app/user" />}>
+              <DropdownMenuItem
+                render={
+                  <Link href={`/workspace/${tenantSlug}/settings/account`} />
+                }
+              >
                 <Settings className="size-4" />
                 Minha conta
               </DropdownMenuItem>
@@ -475,9 +723,7 @@ function SidebarContent({
                   <DropdownMenuItem
                     variant="destructive"
                     disabled={signOutPending}
-                    onClick={() => {
-                      void onSignOut();
-                    }}
+                    onClick={() => void onSignOut()}
                   >
                     <LogOut className="size-4" />
                     {signOutPending ? "Saindo..." : "Sair"}
@@ -538,7 +784,9 @@ function SidebarContent({
                 <Button
                   variant="outline"
                   nativeButton={false}
-                  render={<Link href="/app/user" />}
+                  render={
+                    <Link href={`/workspace/${tenantSlug}/settings/account`} />
+                  }
                 >
                   <Settings className="size-4" />
                   Minha conta
@@ -548,9 +796,7 @@ function SidebarContent({
                     type="button"
                     variant="destructive"
                     disabled={signOutPending}
-                    onClick={() => {
-                      void onSignOut();
-                    }}
+                    onClick={() => void onSignOut()}
                   >
                     <LogOut className="size-4" />
                     {signOutPending ? "Saindo..." : "Sair"}
@@ -575,6 +821,8 @@ function SidebarContent({
 
 export function AppShell({
   children,
+  workspaceBanner,
+  tenantSlug,
   tenantName,
   userEmail,
   userRole,
@@ -584,9 +832,31 @@ export function AppShell({
   const pathname = usePathname();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const pageContent =
-    pageContentMap[pathname as keyof typeof pageContentMap] ??
-    pageContentMap["/app"];
+
+  const getPageContent = () => {
+    if (pageContentMap[pathname]) {
+      return pageContentMap[pathname];
+    }
+    for (const [pattern] of Object.entries(pageContentMap)) {
+      const patternParts = pathname.split("/").filter(Boolean);
+      const mapParts = pattern.split("/").filter(Boolean);
+      if (mapParts.length > 0 && patternParts.length >= mapParts.length) {
+        let matches = true;
+        for (let i = 0; i < mapParts.length; i++) {
+          if (mapParts[i] !== patternParts[i] && mapParts[i] !== "[slug]") {
+            matches = false;
+            break;
+          }
+        }
+        if (matches) {
+          return pageContentMap[pattern];
+        }
+      }
+    }
+    return pageContentMap["/workspace/[slug]"];
+  };
+
+  const pageContent = getPageContent();
   const userInitials = getUserInitials(userEmail);
 
   return (
@@ -594,13 +864,14 @@ export function AppShell({
       <div className={cn("relative min-h-screen")}>
         <aside
           className={cn(
-            "surface-panel-strong hidden border-b border-border/70 p-5 lg:fixed lg:top-4 lg:bottom-4 lg:left-4 lg:z-20 lg:flex lg:flex-col lg:overflow-y-auto lg:rounded-[2rem] lg:border lg:shadow-lg",
+            "surface-panel-strong scrollbar-hidden hidden border-b border-border/70 p-5 lg:fixed lg:top-4 lg:bottom-4 lg:left-4 lg:z-20 lg:flex lg:flex-col lg:overflow-x-hidden lg:overflow-y-auto lg:rounded-[2rem] lg:border lg:shadow-lg",
             isSidebarCollapsed ? "lg:w-24 lg:px-4 lg:py-6" : "lg:w-72 lg:p-6",
           )}
         >
           <SidebarContent
             collapsed={isSidebarCollapsed}
             onCollapse={() => setIsSidebarCollapsed(true)}
+            tenantSlug={tenantSlug}
             tenantName={tenantName}
             userEmail={userEmail}
             userRole={userRole}
@@ -652,14 +923,9 @@ export function AppShell({
                           <LurenessMark subtitle="Application Workspace" />
                         </div>
                         <SheetClose
-                          render={
-                            <Button
-                              variant="outline"
-                              size="icon-sm"
-                              aria-label="Fechar menu lateral"
-                              title="Fechar menu lateral"
-                            />
-                          }
+                          render={<Button variant="outline" size="icon-sm" />}
+                          aria-label="Fechar menu lateral"
+                          title="Fechar menu lateral"
                         >
                           <PanelLeftClose className="size-4" />
                         </SheetClose>
@@ -668,6 +934,7 @@ export function AppShell({
                     <SheetBody className="thin-scrollbar p-4">
                       <SidebarContent
                         mobile
+                        tenantSlug={tenantSlug}
                         tenantName={tenantName}
                         userEmail={userEmail}
                         userRole={userRole}
@@ -703,6 +970,8 @@ export function AppShell({
               </div>
             </div>
           </header>
+
+          {workspaceBanner}
 
           <main className="relative z-10 flex-1 px-6 py-8 lg:px-4 lg:py-8">
             {children}

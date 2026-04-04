@@ -32,3 +32,10 @@ export async function updateContact(
     cache: "no-store",
   });
 }
+
+export async function deleteContact(contactId: string) {
+  return apiRequest<void>(`/contacts/${contactId}`, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+}
