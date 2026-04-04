@@ -1255,7 +1255,7 @@ export function MessagingWorkspace() {
                         }}
                         placeholder={
                           getProviderField("secret_ref")?.placeholder ??
-                          "Ex.: infisical/provider/workspace"
+                          "Ex.: local/provider/workspace"
                         }
                       />
                       <FieldDescription>
